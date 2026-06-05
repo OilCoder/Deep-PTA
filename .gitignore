@@ -1,0 +1,34 @@
+# Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Common
+.env
+*.key
+*.log
+
+# Folders that emerge but are gitignored when present
+debug/
+outputs/
+models/
+wandb/
+
+# Large data (frozen test sets / real cases tracked selectively)
+data/*.h5
+data/*.npz
+data/*.parquet
+data/raw/
+
+# OS
+.DS_Store
+Thumbs.db

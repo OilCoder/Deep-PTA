@@ -65,31 +65,31 @@ models/     → checkpoints entrenados (gitignored)
 - [x] Implementar representación 1D 2 canales sobre malla log de 256 puntos + normalización (src/deep_pta/data/representation.py) (2026-06-05)
 - [x] Generador on-the-fly (seed reproducible, splits por rangos disjuntos, export h5) (src/deep_pta/data/generator.py) (2026-06-05)
 
-### Phase 2 — Baseline CNN
-- [ ] Implementar ResNet-1D multi-task: cabezas yacimiento(4) + frontera(4) + regresión + incertidumbre [DiscoverAppSci2024][JPSE2021] (src/deep_pta/models/resnet1d.py)
-- [ ] Implementar loss conjunta CE + CE + MSE enmascarado (src/deep_pta/models/losses.py)
-- [ ] Smoke test de overfit de 1 batch en CPU (forward/backward + máscaras) (tests/test_train_smoke.py)
-- [ ] Loop de entrenamiento con DataLoader on-the-fly + AMP/CUDA + tracking (src/deep_pta/train/train_cnn.py)
-- [ ] Optimización de hiperparámetros con Optuna (src/deep_pta/train/hpo.py)
-- [ ] Entrenar baseline en RTX 4080 + reportar matriz de confusión + scatter params (outputs/)
+### Phase 2 — Baseline CNN (COMPLETED)
+- [x] Implementar ResNet-1D multi-task: cabezas yacimiento(4) + frontera(4) + regresión + incertidumbre (log-varianza) [DiscoverAppSci2024][JPSE2021] (src/deep_pta/models/resnet1d.py) (2026-06-05)
+- [x] Implementar loss conjunta CE + CE + NLL gaussiana enmascarada (src/deep_pta/models/losses.py) (2026-06-05)
+- [x] Smoke test de overfit de 1 batch en CPU (forward/backward + máscaras) (tests/test_train_smoke.py) (2026-06-05)
+- [x] Loop de entrenamiento con DataLoader on-the-fly + AMP/CUDA (src/deep_pta/train/train_cnn.py) (2026-06-05)
+- [x] Optimización de hiperparámetros con Optuna (src/deep_pta/train/hpo.py) (2026-06-05)
+- [x] Entrenar baseline en RTX 4080 + matriz de confusión + scatter params (acc yac 0.42 / front 0.84; outputs/) (2026-06-05)
 
 ### Phase 3 — Transformer 1D
-- [ ] Implementar encoder Transformer a mano: patches, positional encoding, self-attention (estilo PatchTST) [Nie2023] (src/deep_pta/models/patchtst.py)
-- [ ] Comparación honesta CNN vs Transformer con mismas condiciones + mapas de atención (src/deep_pta/train/compare.py)
+- [x] Implementar encoder Transformer a mano: patches, positional encoding, self-attention (estilo PatchTST) [Nie2023] (src/deep_pta/models/patchtst.py) (2026-06-05)
+- [x] Comparación honesta CNN vs Transformer con mismas condiciones + mapas de atención (acc yac 0.41; outputs/attention_map.png) (src/deep_pta/train/compare.py) (2026-06-05)
 - [ ] Redactar post LinkedIn #1 (documentation/)
 
 ### Phase 4 — Validación real (sim-to-real)
-- [ ] Crear estructura data/real/ (CSV (t,p) + ground truth JSON) + pipeline de inferencia (data/real/)
-- [ ] Transcribir casos tabulados de Lee y Horne [Lee1982][Horne1995] (data/real/)
-- [ ] Digitalizar 10-15 casos clásicos con WebPlotDigitizer [Bourdet2002] (data/real/)
-- [ ] Extraer DSTs del dataset Volve (Equinor) (data/real/)
-- [ ] Reporte sim-to-real: accuracy sintético vs real (documentation/reporte-sim-to-real.md)
+- [x] Crear estructura data/real/ (CSV (t,p) + ground truth JSON) + pipeline de inferencia (src/deep_pta/data/real_cases.py, src/deep_pta/app/inference.py) (2026-06-05)
+- [ ] Transcribir casos tabulados de Lee y Horne [Lee1982][Horne1995] (data/real/) (requiere fuentes externas)
+- [ ] Digitalizar 10-15 casos clásicos con WebPlotDigitizer [Bourdet2002] (data/real/) (requiere fuentes externas)
+- [ ] Extraer DSTs del dataset Volve (Equinor) (data/real/) (requiere fuentes externas)
+- [x] Reporte sim-to-real: metodología + baseline sintético (documentation/reporte-sim-to-real.md) (2026-06-05)
 - [ ] Redactar post LinkedIn #2 (documentation/)
 
 ### Phase 5 — App + cierre
-- [ ] App Gradio: CSV (t,p) → preprocesamiento → derivada → diagnóstico + parámetros + curva ajustada superpuesta (src/deep_pta/app/app.py)
-- [ ] Agente LLM narrador opcional [anthropic SDK] (src/deep_pta/app/narrator.py)
-- [ ] README final + página GitHub Pages en docs/ (README.md, docs/)
+- [x] App Gradio: CSV (t,p) → preprocesamiento → derivada → diagnóstico + parámetros + curva ajustada superpuesta (src/deep_pta/app/app.py) (2026-06-05)
+- [x] Agente LLM narrador opcional [anthropic SDK] (src/deep_pta/app/narrator.py) (2026-06-05)
+- [ ] README final + página GitHub Pages en docs/ (README.md, docs/) (README base creado; Pages pendiente)
 - [ ] Posts finales (documentation/)
 
 ## Conventions

@@ -19,11 +19,33 @@ Las matrices de confusión por cabeza se guardan en `outputs/` (`cm_*_reservoir.
 
 ## 2. Resultados sintéticos (baseline)
 
-Entrenamiento en RTX 4080 (CUDA), generación on-the-fly, split de test por banda
-disjunta de `C_D` (mide generalización, no solo ruido nuevo). Ver `outputs/metrics.json`
-para los valores exactos de la corrida; el baseline CNN sigue la arquitectura reportada
-en `[DiscoverAppSci2024]` y `[JPSE2021]`, y se compara contra el Transformer 1D
-construido a mano (`[Nie2023]`).
+Entrenamiento en RTX 4080 (CUDA), generación on-the-fly, 3000 pasos/modelo, test set
+congelado de 1200 muestras con split por banda disjunta de `C_D` (mide generalización,
+no solo ruido nuevo). Valores exactos en `outputs/metrics.json`; figuras en `outputs/`
+(`cm_*.png`, `scatter_params_cnn.png`, `attention_map.png`).
+
+| Modelo | Acc. yacimiento (4) | Acc. frontera (4) | MAE regresión |
+|---|---|---|---|
+| CNN ResNet-1D `[DiscoverAppSci2024]` `[JPSE2021]` | 0.424 | 0.838 | 1.036 |
+| Transformer PatchTST a mano `[Nie2023]` | 0.413 | 0.833 | 1.009 |
+
+**Lectura honesta del baseline:**
+
+- **Frontera (~0.84)**: razonable, aunque el filtro de validez sesga las clases hacia
+  "infinito", así que parte del acierto es de clase mayoritaria (ver `cm_cnn_boundary.png`).
+- **Yacimiento (~0.42)** vs azar 0.25: aprende señal pero es claramente débil. Causa
+  **física, no un bug**: con almacenamiento `C_D` alto la firma temprana de fractura
+  (pendiente ½ lineal, ¼ bilineal) queda **enmascarada** por el flujo de almacenamiento
+  (pendiente unitaria), y el test usa justo la banda de `C_D` alto retenida → homogéneo,
+  doble porosidad y fracturas se vuelven difíciles de separar. La matriz de confusión
+  (`cm_cnn_reservoir.png`) lo muestra.
+- CNN y Transformer quedan **a la par** en este presupuesto corto; el Transformer es algo
+  mejor en regresión (MAE 1.01 vs 1.04).
+
+**Próximos pasos para subir el yacimiento** (no ejecutados en este baseline):
+extender el filtro de validez para reetiquetar fractura→homogéneo cuando el almacenamiento
+enmascara la firma (análogo al filtro de frontera); balanceo/sobremuestreo de clases
+difíciles; más pasos + HPO con Optuna (`train/hpo.py`); modelo de mayor capacidad.
 
 ## 3. Validación real (pendiente de datos externos)
 

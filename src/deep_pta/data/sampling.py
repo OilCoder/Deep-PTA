@@ -58,6 +58,40 @@ class CurveParams:
     t_d: NDArray[np.float64]
 
 
+def active_param_mask(reservoir_class: int, boundary_class: int) -> NDArray[np.bool_]:
+    """Return the active-parameter mask for a (reservoir, boundary) class pair.
+
+    Storage and skin are always active; reservoir- and boundary-specific parameters are
+    active only for their classes. Used at inference to decode the parameters a model
+    is allowed to report for its predicted classes.
+
+    Parameters
+    ----------
+    reservoir_class : int
+        Reservoir class index.
+    boundary_class : int
+        Boundary class index.
+
+    Returns
+    -------
+    numpy.ndarray
+        Boolean length-``N_PARAMS`` mask.
+    """
+    mask = np.zeros(N_PARAMS, dtype=np.bool_)
+    mask[_IDX["log_CD"]] = True
+    mask[_IDX["S"]] = True
+    if reservoir_class == RES_DOUBLE_POROSITY:
+        mask[_IDX["log_omega"]] = True
+        mask[_IDX["log_lambda"]] = True
+    elif reservoir_class == RES_FIN_FRACTURE:
+        mask[_IDX["log_FCD"]] = True
+    if boundary_class in (BND_SEALING_FAULT, BND_CONSTANT_PRESSURE):
+        mask[_IDX["log_LD"]] = True
+    elif boundary_class == BND_CLOSED:
+        mask[_IDX["log_reD"]] = True
+    return mask
+
+
 def _loguniform(rng: np.random.Generator, low: float, high: float) -> float:
     return float(10.0 ** rng.uniform(np.log10(low), np.log10(high)))
 

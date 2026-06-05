@@ -17,11 +17,12 @@ venv/
 *.key
 *.log
 
-# Folders that emerge but are gitignored when present
-debug/
-outputs/
-models/
-wandb/
+# Folders that emerge but are gitignored when present (anchored to repo root so the
+# src/deep_pta/models package is NOT ignored)
+/debug/
+/outputs/
+/models/
+/wandb/
 
 # Large data (frozen test sets / real cases tracked selectively)
 data/*.h5

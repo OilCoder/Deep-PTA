@@ -73,7 +73,7 @@ def split_of(cp: CurveParams) -> str:
     return "test" if _TEST_CD_BAND[0] <= log_cd < _TEST_CD_BAND[1] else "train"
 
 
-def generate_sample(rng: np.random.Generator, max_retries: int = 8) -> dict[str, object]:
+def generate_sample(rng: np.random.Generator, max_retries: int = 20) -> dict[str, object]:
     """Generate one labelled sample, retrying on degenerate draws.
 
     Parameters
@@ -100,8 +100,11 @@ def generate_sample(rng: np.random.Generator, max_retries: int = 8) -> dict[str,
             reservoir = _build_reservoir(cp)
             boundary = _build_boundary(cp)
             p_wd, _ = evaluate(reservoir, boundary, (cp.raw["C_D"], cp.raw["S"]), cp.t_d)
-            if not np.all(np.isfinite(p_wd)) or np.any(p_wd <= 0.0):
+            if not np.all(np.isfinite(p_wd)):
                 continue
+            # Stehfest inversion leaves tiny negatives on the near-zero early storage
+            # region; clip that roundoff (drawdown pressure is non-negative).
+            p_wd = np.clip(p_wd, 1e-8, None)
             t_obs, p_obs = apply_realism(rng, cp.t_d, p_wd)
             l_window = float(rng.uniform(0.1, 0.3))
             t_der, deriv = bourdet_derivative(t_obs, p_obs, l_window)

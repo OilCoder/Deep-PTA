@@ -55,7 +55,16 @@ strict = true
 python_version = "3.11"
 
 [[tool.mypy.overrides]]
-module = ["scipy.*", "h5py.*", "matplotlib.*"]
+module = [
+    "scipy.*",
+    "h5py.*",
+    "matplotlib.*",
+    "gradio.*",
+    "optuna.*",
+    "anaflow.*",
+    "welltestpy.*",
+    "anthropic.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

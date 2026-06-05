@@ -1,0 +1,6 @@
+{
+  "reservoir": "homogeneous",
+  "boundary": "sealing fault",
+  "source": "synthetic (engine-generated, C_D=200, S=3, L_D=600)",
+  "note": "Not a real case; demonstrates the CSV -> diagnosis flow."
+}

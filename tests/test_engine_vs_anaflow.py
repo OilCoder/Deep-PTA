@@ -33,7 +33,9 @@ def test_homogeneous_matches_anaflow_theis() -> None:
         rate=rate,
     )
     drawdown = np.asarray(drawdown, dtype=float).ravel()
-    p_d_anaflow = 2.0 * np.pi * transmissivity * drawdown / abs(rate)
+    # AnaFlow returns a signed head change (negative for the negative production rate);
+    # dividing by the signed rate yields the positive dimensionless pressure drop.
+    p_d_anaflow = 2.0 * np.pi * transmissivity * drawdown / rate
 
     t_d = transmissivity * times / (storage * rad**2)
     p_d_engine, _ = evaluate(make_homogeneous(), bnd.infinite(), (0.0, 0.0), t_d)

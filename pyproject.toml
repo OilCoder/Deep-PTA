@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "deep-pta"
+version = "0.1.0"
+description = "Neural interpreter of pressure transient tests (PTA): reservoir model, boundary, and key parameters from the log-log Bourdet derivative."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Carlos Esquivel" }]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "h5py>=3.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.8",
+    "ruff>=0.5",
+    "matplotlib>=3.8",
+]
+ml = [
+    "torch>=2.2",
+    "optuna>=3.6",
+    "tensorboard>=2.16",
+]
+app = [
+    "gradio>=4.0",
+]
+validation = [
+    "anaflow>=1.1",
+    "welltestpy>=1.1",
+]
+narrator = [
+    "anthropic>=0.39",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/deep_pta"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "NPY"]
+
+[tool.mypy]
+files = ["src"]
+strict = true
+python_version = "3.11"
+
+[[tool.mypy.overrides]]
+module = ["scipy.*", "h5py.*", "matplotlib.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

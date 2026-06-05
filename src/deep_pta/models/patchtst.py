@@ -80,9 +80,7 @@ class _TransformerBlock(nn.Module):
         self.attn = MultiHeadSelfAttention(d_model, n_heads)
         self.norm2 = nn.LayerNorm(d_model)
         hidden = int(d_model * mlp_ratio)
-        self.mlp = nn.Sequential(
-            nn.Linear(d_model, hidden), nn.GELU(), nn.Linear(hidden, d_model)
-        )
+        self.mlp = nn.Sequential(nn.Linear(d_model, hidden), nn.GELU(), nn.Linear(hidden, d_model))
 
     def forward(self, x: Tensor) -> Tensor:
         """Apply the pre-norm attention and MLP residual sublayers."""
@@ -125,9 +123,7 @@ class PatchTST1D(nn.Module):
         self.n_patches = seq_len // patch_len
         self.embed = nn.Linear(in_channels * patch_len, d_model)
         self.pos = nn.Parameter(torch.zeros(1, self.n_patches, d_model))
-        self.blocks = nn.ModuleList(
-            [_TransformerBlock(d_model, n_heads) for _ in range(depth)]
-        )
+        self.blocks = nn.ModuleList([_TransformerBlock(d_model, n_heads) for _ in range(depth)])
         self.norm = nn.LayerNorm(d_model)
         self.head_reservoir = nn.Linear(d_model, N_RESERVOIR)
         self.head_boundary = nn.Linear(d_model, N_BOUNDARY)

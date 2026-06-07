@@ -23,7 +23,7 @@ def representation_from_pressure(
     dp: NDArray[np.float64],
     l_window: float = 0.2,
 ) -> NDArray[np.float32]:
-    """Build the 2-channel representation from a pressure-change series.
+    """Build the 3-channel representation from a pressure-change series.
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ def representation_from_pressure(
     Returns
     -------
     numpy.ndarray
-        Array of shape ``(2, 256)`` and dtype ``float32``.
+        Array of shape ``(3, 256)`` and dtype ``float32``.
     """
     t_der, deriv = bourdet_derivative(t, dp, l_window)
     return build_representation(t, dp, t_der, deriv)

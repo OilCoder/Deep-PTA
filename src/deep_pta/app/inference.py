@@ -141,7 +141,7 @@ def diagnose(
     -------
     dict
         ``reservoir``, ``boundary`` (names), ``reservoir_class``, ``boundary_class``,
-        ``confidence`` (0-1), ``params`` (decoded), and ``x`` (2 x 256 input).
+        ``confidence`` (0-1), ``params`` (decoded), and ``x`` (3 x 256 input).
     """
     x = representation_from_pressure(t, dp)
     device = next(model.parameters()).device

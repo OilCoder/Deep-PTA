@@ -109,7 +109,7 @@ class PatchTST1D(nn.Module):
 
     def __init__(
         self,
-        in_channels: int = 2,
+        in_channels: int = 3,
         seq_len: int = 256,
         patch_len: int = 16,
         d_model: int = 64,
@@ -136,7 +136,7 @@ class PatchTST1D(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            Input batch of shape ``(B, 2, 256)``.
+            Input batch of shape ``(B, 3, 256)``.
 
         Returns
         -------
@@ -164,7 +164,7 @@ class PatchTST1D(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            Input batch of shape ``(B, 2, 256)``.
+            Input batch of shape ``(B, 3, 256)``.
 
         Returns
         -------

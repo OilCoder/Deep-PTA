@@ -1,6 +1,6 @@
 """On-the-fly synthetic curve generator: engine -> realism -> Bourdet -> representation.
 
-Produces labelled 2-channel log-log samples with perfect labels by construction. The
+Produces labelled 3-channel log-log samples with perfect labels by construction. The
 generator is NumPy-only (no PyTorch) so it stays usable on the CPU build; a thin
 ``torch.utils.data.Dataset`` wrapper lives in :mod:`deep_pta.train`.
 
@@ -22,6 +22,8 @@ from deep_pta.data.sampling import (
     BND_CONSTANT_PRESSURE,
     BND_INFINITE,
     BND_SEALING_FAULT,
+    N_BOUNDARY,
+    N_RESERVOIR,
     RES_DOUBLE_POROSITY,
     RES_FIN_FRACTURE,
     RES_HOMOGENEOUS,
@@ -39,7 +41,9 @@ from deep_pta.engine.solution import (
     make_infinite_conductivity_fracture,
 )
 
-# Held-out C_D band (log10) reserved for the test split.
+# Disjoint held-out C_D bands (log10): validation and test occupy distinct bands
+# so HPO / early-stopping never observe the test storage regime. Train is the rest.
+_VAL_CD_BAND = (2.5, 3.0)
 _TEST_CD_BAND = (3.0, 3.5)
 
 
@@ -68,9 +72,13 @@ def _build_boundary(cp: CurveParams) -> bnd.Boundary:
 
 
 def split_of(cp: CurveParams) -> str:
-    """Assign a sample to ``"train"`` or ``"test"`` by a disjoint ``C_D`` band."""
+    """Assign a sample to ``"train"``, ``"val"``, or ``"test"`` by disjoint ``C_D`` bands."""
     log_cd = np.log10(cp.raw["C_D"])
-    return "test" if _TEST_CD_BAND[0] <= log_cd < _TEST_CD_BAND[1] else "train"
+    if _TEST_CD_BAND[0] <= log_cd < _TEST_CD_BAND[1]:
+        return "test"
+    if _VAL_CD_BAND[0] <= log_cd < _VAL_CD_BAND[1]:
+        return "val"
+    return "train"
 
 
 def generate_sample(rng: np.random.Generator, max_retries: int = 20) -> dict[str, object]:
@@ -86,7 +94,7 @@ def generate_sample(rng: np.random.Generator, max_retries: int = 20) -> dict[str
     Returns
     -------
     dict
-        Keys: ``x`` (2 x 256 float32), ``y_reservoir`` (int), ``y_boundary`` (int),
+        Keys: ``x`` (3 x 256 float32), ``y_reservoir`` (int), ``y_boundary`` (int),
         ``targets`` (float64 [7]), ``mask`` (bool [7]), ``split`` (str).
 
     Raises
@@ -126,17 +134,19 @@ def generate_sample(rng: np.random.Generator, max_retries: int = 20) -> dict[str
     raise RuntimeError("failed to generate a valid sample within max_retries")
 
 
-def export_frozen_test_set(path: str, n: int, seed: int = 0) -> int:
-    """Generate ``n`` test-split samples and write them to an HDF5 file.
+def export_frozen_test_set(path: str, n: int, seed: int = 0, split: str = "test") -> int:
+    """Generate ``n`` samples from one split and write them to an HDF5 file.
 
     Parameters
     ----------
     path : str
         Output ``.h5`` path.
     n : int
-        Number of test-split samples to collect.
+        Number of samples to collect.
     seed : int, optional
         Base seed, by default 0.
+    split : str, optional
+        Which disjoint split to draw from, by default ``"test"``.
 
     Returns
     -------
@@ -148,7 +158,7 @@ def export_frozen_test_set(path: str, n: int, seed: int = 0) -> int:
     y_res, y_bnd, tgts, masks = [], [], [], []
     while len(xs) < n:
         sample = generate_sample(rng)
-        if sample["split"] != "test":
+        if sample["split"] != split:
             continue
         xs.append(sample["x"])  # type: ignore[arg-type]
         y_res.append(sample["y_reservoir"])
@@ -156,10 +166,93 @@ def export_frozen_test_set(path: str, n: int, seed: int = 0) -> int:
         tgts.append(sample["targets"])
         masks.append(sample["mask"])
 
+    _write_h5(path, xs, y_res, y_bnd, tgts, masks)
+    return n
+
+
+def export_stratified_set(
+    path: str,
+    n_per_cell: int,
+    seed: int = 0,
+    split: str = "test",
+    max_draws: int = 2_000_000,
+) -> int:
+    """Export a class-balanced frozen set (equal samples per reservoir×boundary cell).
+
+    Balancing both heads removes the imbalance that makes raw accuracy misleading,
+    so balanced metrics computed on this set are trustworthy. Reuses the same
+    generation path as :func:`export_frozen_test_set`.
+
+    Parameters
+    ----------
+    path : str
+        Output ``.h5`` path.
+    n_per_cell : int
+        Target samples for each of the ``N_RESERVOIR * N_BOUNDARY`` class cells.
+    seed : int, optional
+        Base seed, by default 0.
+    split : str, optional
+        Which disjoint split to draw from (``"train"``/``"val"``/``"test"``),
+        by default ``"test"``.
+    max_draws : int, optional
+        Safety cap on total draws before giving up, by default 2_000_000.
+
+    Returns
+    -------
+    int
+        Number of samples written.
+
+    Raises
+    ------
+    RuntimeError
+        If some cells stay unfilled within ``max_draws`` (reports the shortfall).
+    """
+    rng = np.random.default_rng(seed)
+    counts: dict[tuple[int, int], int] = {}
+    xs: list[NDArray[np.float32]] = []
+    y_res, y_bnd, tgts, masks = [], [], [], []
+    target_cells = N_RESERVOIR * N_BOUNDARY
+
+    draws = 0
+    while len([c for c in counts.values() if c >= n_per_cell]) < target_cells:
+        if draws >= max_draws:
+            missing = {
+                (r, b): n_per_cell - counts.get((r, b), 0)
+                for r in range(N_RESERVOIR)
+                for b in range(N_BOUNDARY)
+                if counts.get((r, b), 0) < n_per_cell
+            }
+            raise RuntimeError(f"stratified export hit max_draws with cells short: {missing}")
+        draws += 1
+        sample = generate_sample(rng)
+        if sample["split"] != split:
+            continue
+        cell = (int(sample["y_reservoir"]), int(sample["y_boundary"]))  # type: ignore[call-overload]
+        if counts.get(cell, 0) >= n_per_cell:
+            continue
+        counts[cell] = counts.get(cell, 0) + 1
+        xs.append(sample["x"])  # type: ignore[arg-type]
+        y_res.append(sample["y_reservoir"])
+        y_bnd.append(sample["y_boundary"])
+        tgts.append(sample["targets"])
+        masks.append(sample["mask"])
+
+    _write_h5(path, xs, y_res, y_bnd, tgts, masks)
+    return len(xs)
+
+
+def _write_h5(
+    path: str,
+    xs: list[NDArray[np.float32]],
+    y_res: list[object],
+    y_bnd: list[object],
+    tgts: list[object],
+    masks: list[object],
+) -> None:
+    """Write the collected sample arrays to an HDF5 file."""
     with h5py.File(path, "w") as f:
         f.create_dataset("x", data=np.asarray(xs, dtype=np.float32))
         f.create_dataset("y_reservoir", data=np.asarray(y_res, dtype=np.int64))
         f.create_dataset("y_boundary", data=np.asarray(y_bnd, dtype=np.int64))
         f.create_dataset("targets", data=np.asarray(tgts, dtype=np.float64))
         f.create_dataset("mask", data=np.asarray(masks, dtype=np.bool_))
-    return n

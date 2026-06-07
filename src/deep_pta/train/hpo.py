@@ -1,67 +1,128 @@
-"""Hyperparameter optimization for the CNN baseline with Optuna.
+"""Hyperparameter optimization for the CNN with Optuna.
 
-Searches learning rate, model capacity, and loss weighting, training a short run per
-trial and maximizing the mean of the two classification accuracies on the frozen test
-set. Intended to run locally on the GPU.
+Searches optimization, regularization, capacity, and loss-weight knobs, training a
+short run per trial and maximizing **balanced** classification accuracy on the frozen
+**validation** set (never the test set, which is touched once at the end). Uses median
+pruning and SQLite persistence so studies resume. Intended to run locally on the GPU.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
+from typing import Any
+
 import optuna
 
-from deep_pta.train.train_cnn import evaluate, train
+from deep_pta.models.losses import LossWeights
+from deep_pta.train.config import TrainConfig
+from deep_pta.train.train_cnn import fit
 
 
-def objective(trial: optuna.Trial, test_h5: str, n_steps: int = 800) -> float:
-    """Optuna objective: mean classification accuracy after a short training run.
+def _trial_config(trial: optuna.Trial, base: TrainConfig, n_steps: int) -> TrainConfig:
+    """Build a TrainConfig for a trial from the proposed hyperparameters."""
+    return replace(
+        base,
+        n_steps=n_steps,
+        lr=trial.suggest_float("lr", 1e-4, 5e-3, log=True),
+        weight_decay=trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True),
+        warmup_frac=trial.suggest_float("warmup_frac", 0.0, 0.15),
+        dropout=trial.suggest_float("dropout", 0.0, 0.3),
+        base_channels=trial.suggest_categorical("base_channels", [16, 32, 48, 64]),
+        n_blocks=trial.suggest_int("n_blocks", 4, 8),
+        batch_size=trial.suggest_categorical("batch_size", [64, 128, 256]),
+        weights=LossWeights(
+            reservoir=trial.suggest_float("w_reservoir", 0.5, 2.0),
+            boundary=trial.suggest_float("w_boundary", 0.5, 2.0),
+            params=trial.suggest_float("w_params", 0.2, 1.5),
+        ),
+        # Short trials: evaluate often, no early-stop, scratch checkpoint.
+        eval_every=max(1, n_steps // 5),
+        patience=0,
+        ckpt_path="models/_hpo_trial.pt",
+        tb_logdir=None,
+    )
+
+
+def objective(trial: optuna.Trial, base: TrainConfig, n_steps: int = 2000) -> float:
+    """Optuna objective: mean balanced accuracy on the validation set.
 
     Parameters
     ----------
     trial : optuna.Trial
         The trial proposing hyperparameters.
-    test_h5 : str
-        Path to the frozen test set.
+    base : TrainConfig
+        Base config supplying the val/test paths and fixed settings.
     n_steps : int, optional
-        Steps per trial, by default 800.
+        Steps per trial, by default 2000.
 
     Returns
     -------
     float
-        Mean of reservoir and boundary accuracy.
+        Mean of reservoir and boundary balanced accuracy on the val set.
     """
-    lr = trial.suggest_float("lr", 1e-4, 5e-3, log=True)
-    base_channels = trial.suggest_categorical("base_channels", [16, 32, 48])
-    n_blocks = trial.suggest_int("n_blocks", 4, 8)
+    cfg = _trial_config(trial, base, n_steps)
 
-    model = train(
-        n_steps=n_steps,
-        lr=lr,
-        base_channels=base_channels,
-        n_blocks=n_blocks,
-        log_every=max(n_steps, 1),
-        num_workers=2,
-    )
-    metrics = evaluate(model, test_h5)
-    acc_res = float(metrics["acc_reservoir"])  # type: ignore[arg-type]
-    acc_bnd = float(metrics["acc_boundary"])  # type: ignore[arg-type]
-    return 0.5 * (acc_res + acc_bnd)
+    def _report(step: int, score: float) -> None:
+        trial.report(score, step)
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+
+    result = fit(cfg, on_eval=_report)
+    val: dict[str, Any] = result["best_val"]  # type: ignore[assignment]
+    return 0.5 * (float(val["bal_acc_reservoir"]) + float(val["bal_acc_boundary"]))
 
 
-def run_study(test_h5: str, n_trials: int = 20) -> optuna.Study:
-    """Run an Optuna study and return it.
+def run_study(
+    base: TrainConfig | None = None,
+    n_trials: int = 40,
+    n_steps: int = 2000,
+    storage: str = "sqlite:///outputs/hpo.db",
+    study_name: str = "deep_pta_cnn",
+) -> optuna.Study:
+    """Run (or resume) an Optuna study and return it.
 
     Parameters
     ----------
-    test_h5 : str
-        Path to the frozen test set.
+    base : TrainConfig, optional
+        Base config; defaults to a fresh :class:`TrainConfig`.
     n_trials : int, optional
-        Number of trials, by default 20.
+        Number of trials, by default 40.
+    n_steps : int, optional
+        Steps per trial, by default 2000.
+    storage : str, optional
+        Optuna storage URL for persistence/resume, by default a local SQLite file.
+    study_name : str, optional
+        Study name, by default ``"deep_pta_cnn"``.
 
     Returns
     -------
     optuna.Study
-        The completed study (maximize).
+        The study after optimization (maximize, median pruning).
     """
-    study = optuna.create_study(direction="maximize")
-    study.optimize(lambda t: objective(t, test_h5), n_trials=n_trials)
+    base = base or TrainConfig()
+    study = optuna.create_study(
+        direction="maximize",
+        study_name=study_name,
+        storage=storage,
+        load_if_exists=True,
+        pruner=optuna.pruners.MedianPruner(n_warmup_steps=1),
+    )
+    study.optimize(lambda t: objective(t, base, n_steps), n_trials=n_trials)
     return study
+
+
+def best_config(study: optuna.Study, base: TrainConfig | None = None) -> TrainConfig:
+    """Map a study's best parameters onto a full :class:`TrainConfig` for the final run."""
+    base = base or TrainConfig()
+    p = study.best_params
+    return replace(
+        base,
+        lr=p["lr"],
+        weight_decay=p["weight_decay"],
+        warmup_frac=p["warmup_frac"],
+        dropout=p["dropout"],
+        base_channels=p["base_channels"],
+        n_blocks=p["n_blocks"],
+        batch_size=p["batch_size"],
+        weights=LossWeights(p["w_reservoir"], p["w_boundary"], p["w_params"]),
+    )

@@ -44,6 +44,8 @@ def multitask_loss(
     targets: Tensor,
     mask: Tensor,
     weights: LossWeights | None = None,
+    class_weights_reservoir: Tensor | None = None,
+    class_weights_boundary: Tensor | None = None,
 ) -> tuple[Tensor, dict[str, float]]:
     """Compute the combined multi-task loss.
 
@@ -59,6 +61,9 @@ def multitask_loss(
         Boolean/float mask of active targets, shape ``(B, 7)``.
     weights : LossWeights, optional
         Term weights; defaults to all ones.
+    class_weights_reservoir, class_weights_boundary : torch.Tensor, optional
+        Per-class cross-entropy weights, shape ``(C,)``, for residual class
+        imbalance; ``None`` (default) leaves the cross-entropy unweighted.
 
     Returns
     -------
@@ -68,8 +73,8 @@ def multitask_loss(
         The three term values as floats, for logging.
     """
     weights = weights or LossWeights()
-    ce_res = F.cross_entropy(output.logits_reservoir, y_reservoir)
-    ce_bnd = F.cross_entropy(output.logits_boundary, y_boundary)
+    ce_res = F.cross_entropy(output.logits_reservoir, y_reservoir, weight=class_weights_reservoir)
+    ce_bnd = F.cross_entropy(output.logits_boundary, y_boundary, weight=class_weights_boundary)
 
     mask_f = mask.to(targets.dtype)
     # Heteroscedastic Gaussian NLL: 0.5 * (exp(-logvar) * err^2 + logvar), masked.

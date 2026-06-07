@@ -96,7 +96,7 @@ def save_attention_figure(model: PatchTST1D, x: Tensor, path: str) -> None:
     model : PatchTST1D
         A trained Transformer.
     x : torch.Tensor
-        A single-sample batch of shape ``(1, 2, 256)``.
+        A single-sample batch of shape ``(1, 3, 256)``.
     path : str
         Output image path.
     """

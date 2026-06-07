@@ -42,6 +42,19 @@ def test_validity_filter_relabels_infinite_when_param_absent() -> None:
             assert cp.boundary_class == BND_INFINITE
 
 
+def test_boundary_distribution_is_balanced() -> None:
+    # The conditioned-window sampler must not collapse most finite boundaries to
+    # "infinite"; each class should retain a sizeable share (was ~70% infinite).
+    rng = np.random.default_rng(3)
+    counts = np.zeros(N_BOUNDARY, dtype=np.int64)
+    n = 2000
+    for _ in range(n):
+        counts[sample_curve(rng).boundary_class] += 1
+    frac = counts / n
+    assert frac[BND_INFINITE] < 0.5, f"infinite still dominates: {frac}"
+    assert np.all(frac > 0.1), f"a boundary class is starved: {frac}"
+
+
 def test_reproducible_with_seed() -> None:
     a = sample_curve(np.random.default_rng(7))
     b = sample_curve(np.random.default_rng(7))

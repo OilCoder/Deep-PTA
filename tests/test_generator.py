@@ -16,13 +16,13 @@ def test_generate_sample_shapes_and_labels() -> None:
     for _ in range(20):
         s = generate_sample(rng)
         x = s["x"]
-        assert x.shape == (2, 256)
+        assert x.shape == (3, 256)
         assert np.isfinite(x).all()
         assert 0 <= int(s["y_reservoir"]) < 4
         assert 0 <= int(s["y_boundary"]) < 4
         assert s["targets"].shape == (N_PARAMS,)
         assert s["mask"].shape == (N_PARAMS,)
-        assert s["split"] in ("train", "test")
+        assert s["split"] in ("train", "val", "test")
 
 
 def test_generate_sample_reproducible() -> None:
@@ -39,7 +39,7 @@ def test_export_frozen_test_set(tmp_path: Path) -> None:
     written = export_frozen_test_set(path, n=n, seed=1)
     assert written == n
     with h5py.File(path, "r") as f:
-        assert f["x"].shape == (n, 2, 256)
+        assert f["x"].shape == (n, 3, 256)
         assert f["y_reservoir"].shape == (n,)
         assert f["targets"].shape == (n, N_PARAMS)
         assert f["mask"].shape == (n, N_PARAMS)

@@ -1,6 +1,6 @@
 """Multi-task 1-D ResNet for PTA diagnosis.
 
-A residual CNN over the 2-channel x 256 log-log representation with four heads:
+A residual CNN over the 3-channel x 256 log-log representation with four heads:
 reservoir class (4), boundary class (4), parameter regression (7), and a per-parameter
 log-variance head for heteroscedastic (aleatoric) uncertainty. The CNN baseline follows
 the architecture shown to work for PTA in [DiscoverAppSci2024]_ and [JPSE2021]_.
@@ -74,24 +74,28 @@ class _ResidualBlock1D(nn.Module):
 
 
 class ResNet1D(nn.Module):
-    """Multi-task 1-D ResNet over the 2-channel log-log representation.
+    """Multi-task 1-D ResNet over the 3-channel log-log representation.
 
     Parameters
     ----------
     in_channels : int, optional
-        Number of input channels, by default 2.
+        Number of input channels, by default 3.
     base_channels : int, optional
         Channel count of the first stage, by default 32.
     n_blocks : int, optional
         Number of residual blocks (channels double and length halves every two
         blocks), by default 6.
+    dropout : float, optional
+        Dropout probability applied to the pooled features before the heads,
+        by default 0.0 (no dropout).
     """
 
     def __init__(
         self,
-        in_channels: int = 2,
+        in_channels: int = 3,
         base_channels: int = 32,
         n_blocks: int = 6,
+        dropout: float = 0.0,
     ) -> None:
         super().__init__()
         self.stem = nn.Sequential(
@@ -108,6 +112,7 @@ class ResNet1D(nn.Module):
             ch = out_ch
         self.blocks = nn.Sequential(*blocks)
         self.pool = nn.AdaptiveAvgPool1d(1)
+        self.dropout = nn.Dropout(dropout)
 
         self.head_reservoir = nn.Linear(ch, N_RESERVOIR)
         self.head_boundary = nn.Linear(ch, N_BOUNDARY)
@@ -120,14 +125,14 @@ class ResNet1D(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            Input batch of shape ``(B, 2, 256)``.
+            Input batch of shape ``(B, 3, 256)``.
 
         Returns
         -------
         ModelOutput
             The four head outputs.
         """
-        feat = self.pool(self.blocks(self.stem(x))).flatten(1)
+        feat = self.dropout(self.pool(self.blocks(self.stem(x))).flatten(1))
         return ModelOutput(
             logits_reservoir=self.head_reservoir(feat),
             logits_boundary=self.head_boundary(feat),

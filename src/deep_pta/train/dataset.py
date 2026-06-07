@@ -39,7 +39,7 @@ class OnTheFlyDataset(IterableDataset[dict[str, Tensor]]):
     epoch_size : int
         Number of samples yielded per epoch (split across workers).
     split : str, optional
-        Which split to keep (``"train"`` or ``"test"``), by default ``"train"``.
+        Which split to keep (``"train"``, ``"val"``, or ``"test"``), by default ``"train"``.
     seed : int, optional
         Base seed; each worker offsets it, by default 0.
     """

@@ -92,6 +92,16 @@ models/     → checkpoints entrenados (gitignored)
 - [ ] README final + página GitHub Pages en docs/ (README.md, docs/) (README base creado; Pages pendiente)
 - [ ] Posts finales (documentation/)
 
+### Phase 6 — Mejora de accuracy y honestidad de métricas (2026-06-07)
+- [x] E0: métricas honestas (balanced accuracy, macro-F1, recall por clase) en evaluate() (src/deep_pta/train/train_cnn.py) (2026-06-07)
+- [x] E1: arreglar desbalance de frontera — muestreo condicionado por observabilidad + storage, class weights opcionales, export estratificado (src/deep_pta/data/sampling.py, models/losses.py, data/generator.py) (2026-06-07)
+- [x] E2: subir accuracy de yacimiento — AdamW + warmup/cosine + dropout + grad clip + early stopping; tercer canal de tiempo absoluto (2→3 canales) (src/deep_pta/data/representation.py, models/resnet1d.py, models/patchtst.py) (2026-06-07)
+- [x] E3: HPO real con Optuna — objetivo balanced accuracy, MedianPruner, persistencia SQLite, eval en val set (src/deep_pta/train/hpo.py) (2026-06-07)
+- [x] E4: infraestructura — split de validación (banda C_D disjunta), TrainConfig, checkpoint-best-on-val, TensorBoard, entrypoint train/run.py (src/deep_pta/train/config.py, run.py, __main__.py) (2026-06-07)
+- [x] E5: protocolo de verificación — test estratificado 3-canal, tabla de ablation, re-corrida del experimento de concentración (debug/) (2026-06-07)
+- [ ] E6: cierre — reporte de metodología+ablations, README final, GitHub Pages, posts (documentation/, docs/)
+- ~~Validación con datos reales en este ciclo~~ (discarded 2026-06-07: el usuario eligió validación solo sintética con test estratificado; datos reales (Lee/Horne/Volve/WebPlotDigitizer) quedan como trabajo futuro, infra real_cases.py lista)
+
 ## Conventions
 - Código e identificadores en inglés; docstrings NumPy style con clave [clave] de la fuente; planes y bitácoras en español.
 - Diseño de referencia: documentation/plan-implementacion.md (fórmulas, mermaid, rangos) y documentation/referencias.md (bibliografía con claves).

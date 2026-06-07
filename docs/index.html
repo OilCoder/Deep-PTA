@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deep PTA — neural pressure transient interpretation</title>
+  <style>
+    :root { --bg:#0d1117; --card:#161b22; --fg:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --good:#3fb950; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background: var(--bg); color: var(--fg); line-height: 1.6; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px; }
+    h1 { font-size: 2.2rem; margin: 0 0 8px; }
+    h2 { font-size: 1.3rem; margin: 40px 0 12px; border-bottom: 1px solid #30363d; padding-bottom: 6px; }
+    .tag { color: var(--accent); font-weight: 600; }
+    .lead { color: var(--muted); font-size: 1.1rem; }
+    .card { background: var(--card); border: 1px solid #30363d; border-radius: 10px; padding: 18px 20px; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #30363d; }
+    th { color: var(--muted); font-weight: 600; }
+    .good { color: var(--good); font-weight: 600; }
+    code { background:#1f2630; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    a { color: var(--accent); }
+    .foot { color: var(--muted); font-size: 0.9rem; margin-top: 40px; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Deep PTA</h1>
+    <p class="lead">A neural network that does the <span class="tag">senior interpreter's job</span>:
+      it reads the Δp + Bourdet-derivative curve (log-log) of a pressure transient test and
+      diagnoses the reservoir model, the boundary, and the key parameters.</p>
+
+    <div class="card">
+      Trained 100% on synthetic data from a <strong>certified</strong> analytical engine
+      (Laplace solutions + Stehfest inversion), verified against published Bourdet/Gringarten
+      type curves and AnaFlow. No commercial simulator.
+    </div>
+
+    <h2>The honest result</h2>
+    <p>Headline numbers are <strong>balanced accuracy</strong> (mean per-class recall) on a
+      <strong>class-stratified</strong> test set — raw accuracy lies under class imbalance.</p>
+    <table>
+      <tr><th>Head</th><th>Baseline (raw / balanced)</th><th>Current (balanced)</th></tr>
+      <tr><td>Reservoir (4 classes)</td><td>0.42 / 0.43</td><td class="good">0.51</td></tr>
+      <tr><td>Boundary (4 classes)</td><td>0.84 / 0.61</td><td class="good">0.70</td></tr>
+    </table>
+    <p>The boundary "0.84" was a mirage: the old test set was ~70% infinite-acting, so the
+      metric rode the majority class. On a balanced test the model genuinely improves the
+      classes that matter — sealing fault 0.35→0.59, constant pressure 0.40→0.60,
+      closed 0.71→0.85 — and homogeneous reservoir recovers from 0.12 to 0.33.</p>
+
+    <h2>What's inside</h2>
+    <ul>
+      <li><strong>Analytical engine</strong> — homogeneous, double porosity, infinite/finite
+        fractures; infinite / sealing-fault / constant-pressure / closed boundaries.</li>
+      <li><strong>Synthetic generator</strong> — realistic noise, drift, truncation, domain-aware
+        validity filter; disjoint <code>C_D</code> bands for train/val/test.</li>
+      <li><strong>Two models</strong> — multi-task ResNet-1D and a hand-built PatchTST-style
+        Transformer over a 3-channel log-log representation.</li>
+      <li><strong>Reproducible training</strong> — Optuna HPO on balanced accuracy, early
+        stopping, TensorBoard; one entrypoint.</li>
+      <li><strong>App + narrator</strong> — Gradio CSV→diagnosis with a fitted-curve overlay
+        and an optional Claude-based narrator.</li>
+    </ul>
+
+    <h2>Method &amp; rigor</h2>
+    <p>The accuracy story — why the metric was misleading, and a quantitative test (error
+      concentration ratio) of whether residual error is physical non-uniqueness or pipeline —
+      is documented in the project's method reports.</p>
+
+    <p class="foot">Built with Python · NumPy/SciPy · PyTorch · Optuna · Gradio.
+      Single-phase oil MVP; real-case validation is future work.</p>
+  </div>
+</body>
+</html>

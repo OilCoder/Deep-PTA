@@ -289,8 +289,9 @@ def _class_weights_from_h5(path: str, n_classes: int, key: str, device: torch.de
 def fit(
     cfg: TrainConfig,
     on_eval: Callable[[int, float], None] | None = None,
+    model: nn.Module | None = None,
 ) -> dict[str, object]:
-    """Train a ResNet-1D from a :class:`TrainConfig` with val-based early stopping.
+    """Train a model from a :class:`TrainConfig` with val-based early stopping.
 
     Uses AdamW with linear-warmup cosine decay, optional dropout, gradient clipping,
     periodic validation on the frozen val set, best-on-val checkpointing, optional
@@ -303,6 +304,10 @@ def fit(
     on_eval : Callable[[int, float], None], optional
         Called after each validation as ``on_eval(step, score)`` where ``score`` is
         the mean balanced accuracy; may raise to abort (used for HPO pruning).
+    model : torch.nn.Module, optional
+        Model to train. If ``None`` (default), a :class:`~deep_pta.models.resnet1d.ResNet1D`
+        is built from ``cfg``; pass an instance (e.g. PatchTST) to train another arch
+        through the identical loop.
 
     Returns
     -------
@@ -312,9 +317,11 @@ def fit(
     """
     torch.manual_seed(cfg.seed)
     device = get_device()
-    model = ResNet1D(
-        base_channels=cfg.base_channels, n_blocks=cfg.n_blocks, dropout=cfg.dropout
-    ).to(device)
+    if model is None:
+        model = ResNet1D(
+            base_channels=cfg.base_channels, n_blocks=cfg.n_blocks, dropout=cfg.dropout
+        )
+    model = model.to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda s: _warmup_cosine(s, cfg.n_steps, cfg.warmup_frac)
@@ -339,11 +346,23 @@ def fit(
             drop_last=True,
         )
     else:
-        # On-the-fly generation: infinite augmentation, CPU-bound.
+        # On-the-fly generation: infinite augmentation, CPU-bound (workers are the
+        # throughput knob; persistent workers + prefetch keep the GPU fed).
         on_the_fly = OnTheFlyDataset(
-            epoch_size=cfg.n_steps * cfg.batch_size, split="train", seed=cfg.seed
+            epoch_size=cfg.n_steps * cfg.batch_size,
+            split="train",
+            seed=cfg.seed,
+            res_accept=cfg.res_sample_weights,
+            cd_max_log_schedule=cfg.cd_max_log_schedule,
+            total_steps=cfg.n_steps,
         )
-        loader = DataLoader(on_the_fly, batch_size=cfg.batch_size, num_workers=cfg.num_workers)
+        loader = DataLoader(
+            on_the_fly,
+            batch_size=cfg.batch_size,
+            num_workers=cfg.num_workers,
+            persistent_workers=cfg.num_workers > 0,
+            prefetch_factor=4 if cfg.num_workers > 0 else None,
+        )
 
     best_score, best_step, since_best = -1.0, -1, 0
     history: list[float] = []

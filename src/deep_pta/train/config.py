@@ -44,13 +44,23 @@ class TrainConfig:
         Early-stopping patience in evaluations (``0`` disables it).
     use_class_weights : bool
         Apply inverse-frequency cross-entropy weights from the val support.
+    res_sample_weights : tuple of float or None
+        Per-reservoir-class acceptance probabilities for on-the-fly oversampling of hard
+        classes (length 4). ``None`` keeps the uniform class draw. Use this OR
+        ``use_class_weights``, not both.
+    cd_max_log_schedule : tuple of float or None
+        ``(start_log, full_log, ramp_frac)`` low→high ``C_D`` curriculum for on-the-fly
+        training; ``None`` disables it.
     weights : LossWeights
         Relative weights of the three loss terms.
     train_h5 : str or None
         Frozen training set path. If set, train from it (fast, fixed augmentation);
         if ``None``, generate curves on the fly (infinite augmentation, CPU-bound).
     val_h5, test_h5 : str
-        Frozen validation/test set paths.
+        Frozen validation / in-distribution test set paths.
+    extrap_test_h5 : str or None
+        Frozen extrapolation stress-test set (held-out high-``C_D`` band); reported
+        separately and never used for model selection. ``None`` skips it.
     ckpt_path : str
         Where to save the best-on-val checkpoint.
     tb_logdir : str or None
@@ -72,9 +82,12 @@ class TrainConfig:
     eval_every: int = 1000
     patience: int = 8
     use_class_weights: bool = False
+    res_sample_weights: tuple[float, ...] | None = None
+    cd_max_log_schedule: tuple[float, float, float] | None = None
     weights: LossWeights = field(default_factory=LossWeights)
     train_h5: str | None = None
     val_h5: str = "data/synthetic_val.h5"
     test_h5: str = "data/synthetic_test_stratified.h5"
+    extrap_test_h5: str | None = "data/synthetic_test_extrapolation.h5"
     ckpt_path: str = "models/cnn_best.pt"
     tb_logdir: str | None = None

@@ -22,7 +22,7 @@ def test_generate_sample_shapes_and_labels() -> None:
         assert 0 <= int(s["y_boundary"]) < 4
         assert s["targets"].shape == (N_PARAMS,)
         assert s["mask"].shape == (N_PARAMS,)
-        assert s["split"] in ("train", "val", "test")
+        assert s["split"] in ("train", "val", "test", "extrap")
 
 
 def test_generate_sample_reproducible() -> None:

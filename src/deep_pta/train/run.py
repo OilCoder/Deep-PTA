@@ -89,6 +89,19 @@ def main() -> None:
     test: dict[str, Any] = result["test"]  # type: ignore[assignment]
     best_val: dict[str, Any] = result["best_val"]  # type: ignore[assignment]
 
+    # Report the held-out extrapolation (high-C_D) stress test separately — it is never
+    # used for model selection; the in-distribution test is the headline metric.
+    extrap: dict[str, Any] | None = None
+    if cfg.extrap_test_h5 is not None and Path(cfg.extrap_test_h5).exists():
+        import torch
+
+        from deep_pta.models.resnet1d import ResNet1D
+        from deep_pta.train.train_cnn import evaluate
+
+        m = ResNet1D(base_channels=cfg.base_channels, n_blocks=cfg.n_blocks)
+        m.load_state_dict(torch.load(cfg.ckpt_path, map_location="cpu"))
+        extrap = evaluate(m, cfg.extrap_test_h5)
+
     Path("outputs").mkdir(parents=True, exist_ok=True)
     with open("outputs/metrics.json", "w") as f:
         json.dump(
@@ -96,6 +109,7 @@ def main() -> None:
                 "best_step": result["best_step"],
                 "val": _json_metrics(best_val),
                 "test": _json_metrics(test),
+                "test_extrap": _json_metrics(extrap) if extrap is not None else None,
             },
             f,
             indent=2,

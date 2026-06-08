@@ -27,9 +27,11 @@ def _trial_config(trial: optuna.Trial, base: TrainConfig, n_steps: int) -> Train
         weight_decay=trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True),
         warmup_frac=trial.suggest_float("warmup_frac", 0.0, 0.15),
         dropout=trial.suggest_float("dropout", 0.0, 0.3),
-        base_channels=trial.suggest_categorical("base_channels", [16, 32, 48, 64]),
-        n_blocks=trial.suggest_int("n_blocks", 4, 8),
-        batch_size=trial.suggest_categorical("batch_size", [64, 128, 256]),
+        # Capacity search widened for the on-the-fly (unlimited-data) regime, where
+        # bigger models stop overfitting the frozen set and can become justified.
+        base_channels=trial.suggest_categorical("base_channels", [32, 48, 64, 96, 128]),
+        n_blocks=trial.suggest_int("n_blocks", 4, 12),
+        batch_size=trial.suggest_categorical("batch_size", [128, 256]),
         weights=LossWeights(
             reservoir=trial.suggest_float("w_reservoir", 0.5, 2.0),
             boundary=trial.suggest_float("w_boundary", 0.5, 2.0),

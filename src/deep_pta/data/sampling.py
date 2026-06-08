@@ -10,10 +10,11 @@ deactivated). Inactive parameters are masked out of the regression loss downstre
 Distribution note (changed 2026-06-07): the time window ``t_max`` is now conditioned on
 the sampled parameters — always past storage (``~50·C_D``), and for boundary cases
 observable ~82% of draws (``SHORT_WINDOW_PROB`` undeveloped). This is a domain-aware
-curriculum, not a leak: train/val/test share the same conditioning, and the disjoint
-``C_D`` band split (see ``generator.split_of``) still measures generalization on unseen
-storage. It replaces the earlier unconditional ``t_max ~ loguniform[1e3,1e8]`` which made
-~70% of finite boundaries fall outside the window and collapse to "infinite".
+curriculum, not a leak: train/val/test share the same conditioning, and the hybrid
+``C_D`` split (see ``generator.split_of``) routes the in-distribution range i.i.d. while
+holding out the highest storage band for extrapolation. It replaces the earlier
+unconditional ``t_max ~ loguniform[1e3,1e8]`` which made ~70% of finite boundaries fall
+outside the window and collapse to "infinite".
 
 Regression target layout (length 7), all log10 except skin:
 
@@ -109,7 +110,9 @@ def _loguniform(rng: np.random.Generator, low: float, high: float) -> float:
     return float(10.0 ** rng.uniform(np.log10(low), np.log10(high)))
 
 
-def sample_curve(rng: np.random.Generator, n_time: int = 200) -> CurveParams:
+def sample_curve(
+    rng: np.random.Generator, n_time: int = 200, cd_max: float | None = None
+) -> CurveParams:
     """Draw one curve specification (classes, parameters, time window, mask).
 
     Parameters
@@ -118,6 +121,9 @@ def sample_curve(rng: np.random.Generator, n_time: int = 200) -> CurveParams:
         Seeded random generator for reproducibility.
     n_time : int, optional
         Number of dimensionless time points to evaluate, by default 200.
+    cd_max : float, optional
+        Upper bound on wellbore storage ``C_D`` for this draw. ``None`` (default) uses
+        the full range ``1e4``; a smaller value implements a low→high storage curriculum.
 
     Returns
     -------
@@ -132,7 +138,7 @@ def sample_curve(rng: np.random.Generator, n_time: int = 200) -> CurveParams:
     raw: dict[str, float] = {}
 
     # Wellbore storage and skin are always active.
-    c_d = _loguniform(rng, 1.0, 1e4)
+    c_d = _loguniform(rng, 1.0, 1e4 if cd_max is None else cd_max)
     s = float(rng.uniform(-3.0, 10.0))
     raw["C_D"], raw["S"] = c_d, s
     targets[_IDX["log_CD"]], mask[_IDX["log_CD"]] = np.log10(c_d), True

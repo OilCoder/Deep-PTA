@@ -4,11 +4,16 @@ Produces labelled 3-channel log-log samples with perfect labels by construction.
 generator is NumPy-only (no PyTorch) so it stays usable on the CPU build; a thin
 ``torch.utils.data.Dataset`` wrapper lives in :mod:`deep_pta.train`.
 
-A **disjoint-range split** holds out a band of wellbore storage ``C_D`` for the test
-set, so test performance measures genuine generalization (not just unseen noise).
+A **hybrid C_D split** holds out the highest wellbore-storage band entirely as an
+extrapolation stress test (never trained on), and splits the remaining in-distribution
+range i.i.d. by a deterministic per-sample fingerprint into train/val/test. Train and
+the in-distribution test thus share the same ``C_D`` distribution yet never share a
+sample, while the extrapolation set measures generalization to unseen high storage.
 """
 
 from __future__ import annotations
+
+import hashlib
 
 import h5py
 import numpy as np
@@ -41,10 +46,12 @@ from deep_pta.engine.solution import (
     make_infinite_conductivity_fracture,
 )
 
-# Disjoint held-out C_D bands (log10): validation and test occupy distinct bands
-# so HPO / early-stopping never observe the test storage regime. Train is the rest.
-_VAL_CD_BAND = (2.5, 3.0)
-_TEST_CD_BAND = (3.0, 3.5)
+# Hybrid C_D split (log10). The top storage band is held out entirely as an
+# extrapolation stress test the model never trains on; the remaining in-distribution
+# range is split i.i.d. by a per-sample fingerprint into train/val/test.
+_EXTRAP_CD_MIN_LOG = 3.5  # log10(C_D) >= 3.5  (C_D >= ~3162) -> extrapolation-only
+_TEST_FRACTION = 0.10  # in-distribution fraction routed to the headline test set
+_VAL_FRACTION = 0.10  # in-distribution fraction routed to validation
 
 
 def _build_reservoir(cp: CurveParams) -> ReservoirSpec:
@@ -71,17 +78,61 @@ def _build_boundary(cp: CurveParams) -> bnd.Boundary:
     raise ValueError(f"unknown boundary class {cp.boundary_class}")
 
 
+def _sample_fingerprint(cp: CurveParams) -> float:
+    """Map a sample to a stable value in ``[0, 1)`` from its labels and parameters.
+
+    Uses a content hash of the factored labels and the full target vector, so the same
+    physical sample always lands in the same split regardless of draw order or RNG seed.
+    This is what guarantees no train/test leakage under the i.i.d. holdout.
+
+    Parameters
+    ----------
+    cp : CurveParams
+        The sampled curve specification.
+
+    Returns
+    -------
+    float
+        Deterministic fingerprint in ``[0, 1)``.
+    """
+    key = np.concatenate(
+        [[float(cp.reservoir_class), float(cp.boundary_class)], cp.targets]
+    ).astype(np.float64)
+    digest = hashlib.blake2b(key.tobytes(), digest_size=8).digest()
+    return int.from_bytes(digest, "big") / 2.0**64
+
+
 def split_of(cp: CurveParams) -> str:
-    """Assign a sample to ``"train"``, ``"val"``, or ``"test"`` by disjoint ``C_D`` bands."""
-    log_cd = np.log10(cp.raw["C_D"])
-    if _TEST_CD_BAND[0] <= log_cd < _TEST_CD_BAND[1]:
+    """Assign a sample to ``"train"``, ``"val"``, ``"test"``, or ``"extrap"``.
+
+    The highest wellbore-storage band (``log10(C_D) >= _EXTRAP_CD_MIN_LOG``) is held out
+    entirely as the extrapolation stress test. The remaining in-distribution range is
+    split i.i.d. by a deterministic per-sample fingerprint, so train and the
+    in-distribution test share the same ``C_D`` distribution yet never share a sample.
+
+    Parameters
+    ----------
+    cp : CurveParams
+        The sampled curve specification.
+
+    Returns
+    -------
+    str
+        One of ``"train"``, ``"val"``, ``"test"``, ``"extrap"``.
+    """
+    if np.log10(cp.raw["C_D"]) >= _EXTRAP_CD_MIN_LOG:
+        return "extrap"
+    h = _sample_fingerprint(cp)
+    if h < _TEST_FRACTION:
         return "test"
-    if _VAL_CD_BAND[0] <= log_cd < _VAL_CD_BAND[1]:
+    if h < _TEST_FRACTION + _VAL_FRACTION:
         return "val"
     return "train"
 
 
-def generate_sample(rng: np.random.Generator, max_retries: int = 20) -> dict[str, object]:
+def generate_sample(
+    rng: np.random.Generator, max_retries: int = 20, cd_max: float | None = None
+) -> dict[str, object]:
     """Generate one labelled sample, retrying on degenerate draws.
 
     Parameters
@@ -90,6 +141,9 @@ def generate_sample(rng: np.random.Generator, max_retries: int = 20) -> dict[str
         Seeded generator.
     max_retries : int, optional
         Maximum resamples before giving up, by default 8.
+    cd_max : float, optional
+        Upper bound on wellbore storage ``C_D`` for the draw (curriculum); forwarded
+        to :func:`~deep_pta.data.sampling.sample_curve`. ``None`` uses the full range.
 
     Returns
     -------
@@ -103,7 +157,7 @@ def generate_sample(rng: np.random.Generator, max_retries: int = 20) -> dict[str
         If no valid sample is produced within ``max_retries``.
     """
     for _ in range(max_retries):
-        cp = sample_curve(rng)
+        cp = sample_curve(rng, cd_max=cd_max)
         try:
             reservoir = _build_reservoir(cp)
             boundary = _build_boundary(cp)

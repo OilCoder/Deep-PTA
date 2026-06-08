@@ -40,25 +40,34 @@
 
     <h2>The honest result</h2>
     <p>Headline numbers are <strong>balanced accuracy</strong> (mean per-class recall) on a
-      <strong>class-stratified</strong> test set — raw accuracy lies under class imbalance.</p>
+      <strong>class-stratified</strong> test set — raw accuracy lies under class imbalance.
+      Two test sets are reported: an <strong>in-distribution</strong> holdout (headline) and a
+      held-out <strong>high-storage extrapolation</strong> set the model never trains on.</p>
     <table>
-      <tr><th>Head</th><th>Baseline (raw / balanced)</th><th>Current (balanced)</th></tr>
-      <tr><td>Reservoir (4 classes)</td><td>0.42 / 0.43</td><td class="good">0.51</td></tr>
-      <tr><td>Boundary (4 classes)</td><td>0.84 / 0.61</td><td class="good">0.70</td></tr>
+      <tr><th>Head</th><th>Original (misleading)</th><th>Honest baseline</th><th>In-distribution</th><th>Extrapolation</th></tr>
+      <tr><td>Reservoir (4 classes)</td><td>0.42 raw</td><td>0.513</td><td class="good">0.649</td><td>0.553</td></tr>
+      <tr><td>Boundary (4 classes)</td><td>0.84 raw</td><td>0.698</td><td class="good">0.765</td><td>0.733</td></tr>
+      <tr><td>Param MAE (log10)</td><td>—</td><td>0.69</td><td class="good">0.36</td><td>0.73</td></tr>
     </table>
-    <p>The boundary "0.84" was a mirage: the old test set was ~70% infinite-acting, so the
-      metric rode the majority class. On a balanced test the model genuinely improves the
-      classes that matter — sealing fault 0.35→0.59, constant pressure 0.40→0.60,
-      closed 0.71→0.85 — and homogeneous reservoir recovers from 0.12 to 0.33.</p>
+    <p>Headline is a <strong>ResNet-1D + PatchTST ensemble</strong>. The boundary "0.84" was a
+      mirage (old test ~70% infinite-acting). The real lift came from <strong>data scale</strong>:
+      a GPU-batched engine — validated against the certified CPU engine to ~4e-7 — made training
+      on millions of curves cheap, raising reservoir balanced accuracy 0.51→0.65 and nearly
+      halving the parameter MAE. Homogeneous reservoir recall went 0.12→0.59. A 2× larger model
+      matched the small one, so <em>capacity</em> was not the bottleneck — <em>data</em> was. The
+      residual ceiling is the physical homogeneous↔infinite-fracture non-uniqueness.</p>
 
     <h2>What's inside</h2>
     <ul>
       <li><strong>Analytical engine</strong> — homogeneous, double porosity, infinite/finite
         fractures; infinite / sealing-fault / constant-pressure / closed boundaries.</li>
+      <li><strong>GPU-batched engine</strong> — a PyTorch port of the analytical engine
+        validated against the certified CPU engine to ~4e-7; generates millions of curves in
+        minutes, preserving the data distribution.</li>
       <li><strong>Synthetic generator</strong> — realistic noise, drift, truncation, domain-aware
-        validity filter; disjoint <code>C_D</code> bands for train/val/test.</li>
-      <li><strong>Two models</strong> — multi-task ResNet-1D and a hand-built PatchTST-style
-        Transformer over a 3-channel log-log representation.</li>
+        validity filter; a hybrid <code>C_D</code> split (in-distribution holdout + extrapolation).</li>
+      <li><strong>Two models + ensemble</strong> — multi-task ResNet-1D and a hand-built
+        PatchTST-style Transformer over a 3-channel log-log representation, fused by an ensemble.</li>
       <li><strong>Reproducible training</strong> — Optuna HPO on balanced accuracy, early
         stopping, TensorBoard; one entrypoint.</li>
       <li><strong>App + narrator</strong> — Gradio CSV→diagnosis with a fitted-curve overlay

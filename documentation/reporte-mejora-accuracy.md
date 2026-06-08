@@ -104,3 +104,73 @@ clasificador con métrica engañosa a uno con **métricas honestas y mejores en 
 importan**, con un diagnóstico cuantitativo (ratios de concentración) de cuánto del error
 residual es física vs pipeline. Trabajo futuro: validación con datos reales (infra lista),
 mayor diversidad de datos de entrenamiento para el yacimiento, y currículo de `C_D`.
+
+---
+
+# Ciclo v2 (2026-06-08) — split híbrido, motor GPU y escala de datos
+
+El ciclo v1 dejó el yacimiento data-limited (HPO nulo). El v2 atacó justamente eso.
+
+## Decisiones y cambios
+
+- **Split de `C_D` híbrido (decisión del usuario).** Antes train/test usaban bandas de `C_D`
+  **disjuntas** → el modelo se evaluaba extrapolando a almacenamiento nunca visto (test
+  brutal que topaba homogéneo/inf-fractura). Ahora `generator.split_of` reserva la banda
+  alta (`log10 C_D ≥ 3.5`) como **test de extrapolación** y reparte el resto **i.i.d. por
+  hash de muestra** (sin fuga, verificado: 0 colisiones de split). La **métrica de cabecera**
+  pasa a ser in-distribution; el test de extrapolación se reporta **aparte**.
+- **Motor GPU (autorizado tocar el motor).** Se portó el motor analítico a PyTorch batched
+  (`src/deep_pta/engine/gpu_engine.py`): agrupa por clase y hace Stehfest en GPU; implementa
+  el Bessel I escalado (`ive`) que torch no trae. **Validado contra el motor CPU certificado a
+  4e-7** (muy por debajo del piso de ruido de realismo y de la tolerancia de certificación;
+  `tests/test_gpu_engine.py`). El motor CPU sigue siendo la referencia; el GPU solo acelera la
+  generación (~10-22× en la parte del motor), **preservando la distribución de datos**.
+- **Escala de datos.** Generador paralelo CPU (`dbg_make_train_1m.py`) y generador GPU
+  (`dbg_make_train_gpu.py`, motor GPU + post CPU, distribución idéntica, ~3.3× end-to-end).
+  Sets congelados de **2M** (CPU, 22 min) y **5M** (GPU, 12 min), reservoir balanceado 25%/clase
+  (→ 500k/1.25M por clase, vs ~6k del set viejo de 25k).
+- **Ensemble.** Wrapper que promedia softmax y fusiona parámetros por precisión
+  (`src/deep_pta/models/ensemble.py`). Combina dos ResNet (base32/6 y base64/10) sin coste de
+  entrenamiento extra.
+
+## Tabla de ablation v2 (mismo test estratificado in-distribution)
+
+| Config | bal-acc yac | bal-acc front | macro-F1 yac | MAE | recall yac (homog/dp/inf/fin) |
+|---|---|---|---|---|---|
+| Baseline v1 (config nuevo, frozen 25k) | 0.513 | 0.698 | 0.507 | 0.69 | 0.33/0.61/0.38/0.73 |
+| **2M** (ResNet32, 40k steps) | 0.618 | 0.750 | 0.622 | 0.429 | 0.49/0.70/0.50/0.78 |
+| **5M** (ResNet32, 80k steps) | 0.638 | 0.750 | 0.644 | 0.399 | 0.54/0.72/0.50/0.79 |
+| **5M** (PatchTST, 60k steps) | 0.639 | 0.758 | 0.643 | 0.364 | 0.54/0.74/0.50/0.77 |
+| **Ensemble 5M** (ResNet32 + PatchTST) | **0.649** | **0.765** | 0.654 | **0.357** | 0.59/0.73/0.50/0.79 |
+
+Un ResNet 2× más grande (base64/10) dio yac ≈0.633 (capacidad plana); un ensemble de 3
+(R32+R64+PatchTST) llega a 0.651, marginal sobre el de 2. Se embarca el ensemble **R32 +
+PatchTST** (arquitecturas diversas, ambos completos) como mejor configuración.
+
+**Test de extrapolación** (banda alta de `C_D` nunca entrenada): ensemble yac **0.553**,
+front **0.733**, MAE 0.735 — degradación honesta y acotada fuera de distribución (el ensemble
+de 2 ResNet extrapola algo mejor en frontera, 0.768, a costa de menor in-distribution).
+
+## Lectura honesta
+
+- **Los datos eran el cuello, como predijo el HPO nulo de v1.** Pasar de 25k → 2M subió el
+  yacimiento 0.513 → 0.618; a 5M, 0.638. La **curva de escala se aplana** (2M→5M solo +0.02).
+- **La capacidad también se aplana:** un ResNet grande (base64/10) ≈ al pequeño (0.633 vs
+  0.638). No es cuello de hiperparámetros ni de capacidad.
+- **El ensemble** (ResNet32 + PatchTST) da el mejor número global (yac 0.649, front 0.765,
+  MAE 0.357) combinando dos arquitecturas sin coste de entrenamiento extra.
+- **Mejora total v1→v2:** yacimiento **0.513 → 0.649 (+0.136)**, frontera 0.698 → 0.765,
+  **MAE 0.69 → 0.36 (−48%)**. Desde el "0.42 engañoso" original, el yacimiento honesto y
+  balanceado es hoy ~0.65.
+- **Techo restante:** la inf-fractura se estanca en ~0.46-0.50 (confusión física con
+  homogéneo a tiempos largos). Los ratios de concentración de yacimiento (1.0-1.25) indican
+  que el residual es **parcialmente** físico; el núcleo duro homogéneo↔inf-fractura es el
+  límite práctico de no-unicidad para esta taxonomía.
+
+## Conclusión v2
+
+La hipótesis "faltan datos" quedó **confirmada empíricamente**: más datos (vía un motor GPU
+validado contra el certificado) subieron el yacimiento honesto de 0.51 a 0.64 y bajaron el
+MAE casi a la mitad, con extrapolación reportada por separado. El siguiente lever ya no es
+más datos ni más capacidad, sino **romper la no-unicidad homogéneo↔inf-fractura** (features
+físicas adicionales o tareas auxiliares) y la **validación con datos reales**.

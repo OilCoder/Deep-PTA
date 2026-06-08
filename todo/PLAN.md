@@ -99,8 +99,19 @@ models/     → checkpoints entrenados (gitignored)
 - [x] E3: HPO real con Optuna — objetivo balanced accuracy, MedianPruner, persistencia SQLite, eval en val set (src/deep_pta/train/hpo.py) (2026-06-07)
 - [x] E4: infraestructura — split de validación (banda C_D disjunta), TrainConfig, checkpoint-best-on-val, TensorBoard, entrypoint train/run.py (src/deep_pta/train/config.py, run.py, __main__.py) (2026-06-07)
 - [x] E5: protocolo de verificación — test estratificado 3-canal, tabla de ablation, re-corrida del experimento de concentración (debug/) (2026-06-07)
-- [ ] E6: cierre — reporte de metodología+ablations, README final, GitHub Pages, posts (documentation/, docs/)
+- [x] E6: cierre — reporte de metodología+ablations, README final, GitHub Pages (documentation/, docs/) (2026-06-08)
 - ~~Validación con datos reales en este ciclo~~ (discarded 2026-06-07: el usuario eligió validación solo sintética con test estratificado; datos reales (Lee/Horne/Volve/WebPlotDigitizer) quedan como trabajo futuro, infra real_cases.py lista)
+
+### Phase 7 — GPU engine + escala de datos (2026-06-08)
+- [x] E8: split de C_D híbrido — holdout i.i.d. por hash + banda alta como test de extrapolación; no-fuga verificada (src/deep_pta/data/generator.py) (2026-06-08)
+- [x] Motor GPU — port PyTorch batched validado vs CPU certificado a 4e-7 (src/deep_pta/engine/gpu_engine.py, tests/test_gpu_engine.py) (2026-06-08)
+- [x] Generadores de escala — paralelo CPU + GPU (motor GPU + post CPU); sets congelados 2M y 5M (debug/dbg_make_train_1m.py, dbg_make_train_gpu.py) (2026-06-08)
+- [x] Entrenamiento a escala — ResNet32 sobre 2M (0.618) y 5M (0.638); ResNet64 (≈0.633); ensemble (0.644) (2026-06-08)
+- [x] Ensemble — wrapper softmax + fusión por precisión (src/deep_pta/models/ensemble.py) (2026-06-08)
+- [x] Cierre v2 — tabla de ablations v2, reporte, README, GitHub Pages, métricas y figuras (documentation/, docs/, README.md) (2026-06-08)
+- [ ] Romper no-unicidad homogéneo↔inf-fractura (features físicas extra o tareas auxiliares)
+- [ ] Validación con datos reales (Lee/Horne/Volve/WebPlotDigitizer); infra real_cases.py lista
+- [ ] Arreglar matcher del hook PreToolUse (.claude) que da falsos positivos (--no-verify/pkill/until)
 
 ## Conventions
 - Código e identificadores en inglés; docstrings NumPy style con clave [clave] de la fuente; planes y bitácoras en español.

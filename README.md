@@ -18,30 +18,43 @@ Design source of truth: `documentation/deep-pta.md`,
   constant-pressure / closed boundaries, via Laplace-space solutions + Stehfest
   inversion. Verified against published Bourdet/Gringarten type curves and AnaFlow.
 - **Synthetic generator** — realistic noise, drift, truncation, and a domain-aware
-  validity filter; reproducible, with disjoint `C_D` bands for train/val/test.
-- **Two models** — a multi-task ResNet-1D and a hand-built PatchTST-style Transformer,
-  over a 3-channel log-log representation (Δp, Bourdet derivative, absolute time).
+  validity filter; reproducible, with a **hybrid `C_D` split** (i.i.d. in-distribution
+  holdout + a held-out high-storage extrapolation set).
+- **GPU-batched engine** — a PyTorch port of the analytical engine validated against the
+  certified CPU engine to ~4e-7 (`src/deep_pta/engine/gpu_engine.py`); generates millions
+  of curves in minutes (2M / 5M frozen training sets), preserving the data distribution.
+- **Two models + ensemble** — a multi-task ResNet-1D and a hand-built PatchTST-style
+  Transformer over a 3-channel log-log representation (Δp, Bourdet derivative, absolute
+  time), plus a softmax/precision-fusing ensemble.
 - **Honest evaluation** — balanced accuracy, macro-F1, and per-class recall on a
-  class-stratified test set; an entrypoint with HPO, early stopping, and TensorBoard.
+  class-stratified test set, reported separately for in-distribution and extrapolation;
+  an entrypoint with HPO, early stopping, and TensorBoard.
 - **App + narrator** — Gradio CSV→diagnosis with a fitted-curve overlay; optional
   Claude-based narrator.
 
 ## Results (honest, balanced)
 
-Headline accuracy is reported as **balanced accuracy** (mean per-class recall) on a
-**class-stratified** test set — raw accuracy is misleading under class imbalance.
+Headline accuracy is **balanced accuracy** (mean per-class recall) on a **class-stratified**
+test set — raw accuracy is misleading under class imbalance. Two test sets are reported: an
+**in-distribution** holdout (headline) and a held-out **high-`C_D` extrapolation** stress
+test the model never trains on.
 
-| Head | Baseline (raw / balanced) | Current (balanced) |
-|---|---|---|
-| Reservoir (4 classes) | 0.42 / 0.43 | **0.51** |
-| Boundary (4 classes) | 0.84 / 0.61 | **0.70** |
+The headline is a **ResNet-1D + PatchTST ensemble** (best configuration).
 
-The boundary "0.84" was a mirage: the old test set was ~70% infinite-acting, so the
-metric rode the majority class. On a balanced test the model genuinely improves the
-classes that matter (sealing fault 0.35→0.59, constant pressure 0.40→0.60, closed
-0.71→0.85) and the homogeneous reservoir recovers from 0.12 to 0.33. Full method and
-ablation: `documentation/reporte-mejora-accuracy.md` and
-`documentation/reporte-no-unicidad-confusiones.md`.
+| Head | Original (misleading) | Honest baseline | **In-distribution (now)** | Extrapolation |
+|---|---|---|---|---|
+| Reservoir (4 classes) | 0.42 raw | 0.513 | **0.649** | 0.553 |
+| Boundary (4 classes) | 0.84 raw | 0.698 | **0.765** | 0.733 |
+| Param MAE (log10) | — | 0.69 | **0.36** | 0.73 |
+
+The boundary "0.84" was a mirage (old test ~70% infinite-acting). The real gains came from
+**data scale**: a GPU-batched engine made it cheap to train on millions of curves, lifting
+reservoir balanced accuracy 0.51 → 0.65 and nearly halving the parameter MAE (0.69 → 0.36).
+Per-class reservoir recall: homogeneous 0.12 → 0.59, double-porosity 0.51 → 0.73. The
+residual ceiling is the physical homogeneous↔infinite-fracture non-uniqueness. Capacity is
+**not** the bottleneck (a 2× larger model matched the small one); data was. The best single
+model (ResNet-1D on 5M) scores 0.638 reservoir / 0.750 boundary on its own. Full method and
+ablation: `documentation/reporte-mejora-accuracy.md`.
 
 ## Run it
 
@@ -50,16 +63,21 @@ uv sync                                  # or: pip install -e .[dev,ml,app]
 
 pytest -q                                # verification gate (also: mypy src/, ruff check .)
 
-# Train (frozen train set optional; on-the-fly if omitted). HPO + final run:
-python -m deep_pta.train --hpo-trials 20 --steps 20000 \
-    --train-h5 data/synthetic_train.h5 --class-weights
+# Generate a large frozen training set on the GPU (engine on GPU, post on CPU):
+python debug/dbg_make_train_gpu.py --total 5000000 --out data/synthetic_train_5m.h5
+
+# Train the final model from the frozen set (num_workers 0 for very large sets):
+python -m deep_pta.train --steps 80000 --train-h5 data/synthetic_train_5m.h5
 
 python -m deep_pta.app.app               # launch the Gradio app
 ```
 
 ## Status
 
-Engineering complete (engine, generator, models, app, narrator). Latest cycle fixed the
-metric honesty and class imbalance and added a reproducible HPO/training pipeline. Real
-case validation (Lee/Horne/Volve/WebPlotDigitizer) is future work — the inference path
-(`src/deep_pta/data/real_cases.py`) is ready. See `todo/PLAN.md`.
+Engineering complete (engine, generator, models, app, narrator). The 2026-06 cycles fixed
+metric honesty + class imbalance, added a hybrid `C_D` split (in-distribution + extrapolation),
+a GPU-batched engine validated against the certified CPU engine, and confirmed empirically
+that **data scale** — not hyperparameters or capacity — was the bottleneck for the reservoir
+head (0.51 → 0.64). Next: break the homogeneous↔infinite-fracture non-uniqueness and validate
+on real cases (Lee/Horne/Volve/WebPlotDigitizer; the inference path
+`src/deep_pta/data/real_cases.py` is ready). See `todo/PLAN.md`.

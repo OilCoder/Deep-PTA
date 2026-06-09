@@ -28,7 +28,9 @@ Start at `.claude/rules/project-guidelines.md` for the full index.
 - **Code** (identifiers + comments): **English**.
 - **Docstrings**: **NumPy style** (NumPy/SciPy/PyTorch ecosystem).
 - **Plans and bitácoras** (`todo/`): **Spanish** (user's working language).
-- **Commits**: Conventional Commits subset — see `.claude/rules/commit-style.md`.
+- **Study notes** (`aprendizaje/`): **Spanish** prose, English technical terms.
+- **Commits**: Conventional Commits subset (9 prefixes, includes `learn:`) — see
+  `.claude/rules/commit-style.md`.
 
 ## Stack and environment
 
@@ -37,7 +39,11 @@ Start at `.claude/rules/project-guidelines.md` for the full index.
   Stehfest inversion. No commercial simulator (OPM Flow optional, later phase).
 - HPO: Optuna. Tracking: W&B / TensorBoard. App: Gradio or Streamlit.
 - Engine validation: `AnaFlow` / `welltestpy` + published Bourdet/Gringarten type curves.
-- Hardware: NVIDIA RTX 4080 (CUDA) for training; Devcontainer + Docker on WSL2.
+  A GPU-batched port (`gpu_engine.py`, torch) is validated to 4e-7 against the
+  certified CPU engine and generates the million-curve training sets.
+- Hardware: NVIDIA RTX 4080 (CUDA) for training and data generation, on WSL2.
+- Environment: `uv`-managed `.venv` (use `.venv/bin/{python,pytest,mypy,ruff}`).
+  No Docker config in this repo yet, despite the cross-project convention.
 
 ## Verification gate (mandatory)
 
@@ -55,11 +61,17 @@ published type curves and AnaFlow/welltestpy** before any model is trained.
 
 ## Folder convention
 
-Minimum scaffold (`.claude/`, `todo/`, `documentation/`, `docs/`). Code folders
-(`src/`, `tests/`, `data/`, `models/`, `outputs/`, `debug/`) emerge per phase, not
-up front. `documentation/` = code docs (never `docs/`); `docs/` = GitHub Pages only.
+Minimum scaffold (`.claude/`, `todo/`, `documentation/`, `aprendizaje/`, `docs/`).
+Code folders (`src/`, `tests/`, `data/`, `models/`, `outputs/`, `debug/`) emerge per
+phase, not up front. `documentation/` = code docs (never `docs/`); `docs/` = GitHub
+Pages only; `aprendizaje/` = study material (target of `/study`).
 
 ## Current state
 
-**Fase 0/1** — design fully landed, base configured. Validation mode: `suggest`.
-Next: build the analytical engine (Laplace solutions + Stehfest). See `todo/PLAN.md`.
+**Ciclo v2 completo (2026-06-08)** — engine certified (9 type curves + AnaFlow),
+GPU engine validated (4e-7), 5M-curve training sets, honest balanced metrics.
+Headline (ResNet32+PatchTST ensemble, in-dist stratified test): reservoir bal-acc
+**0.649**, boundary **0.765**, MAE **0.357**; extrapolation stress test 0.553/0.733.
+Validation mode: `warn`. Next: v3 cycle — physics-informed channels (Δp−Δp′
+separation + local slope) to break the homogeneous↔inf-fracture confusion.
+See `todo/PLAN.md` and `documentation/reporte-mejora-accuracy.md`.

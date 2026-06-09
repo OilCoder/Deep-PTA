@@ -12,30 +12,34 @@ Construir una red neuronal que interprete pruebas de presión (curva Δp + deriv
 | HPO / tracking | Optuna, W&B / TensorBoard |
 | App | Gradio o Streamlit |
 | Validación motor | AnaFlow / welltestpy + type curves Bourdet/Gringarten |
-| Hardware | RTX 4080 (CUDA), Devcontainer + Docker en WSL2 |
+| Hardware | RTX 4080 (CUDA) en WSL2; entorno uv/.venv (sin Docker en este repo) |
 
 ## Structure
 ```
 .claude/                      → rules, skills, agents, hooks (gitignored)
 todo/                         → PLAN.md y bitácoras
-documentation/                → diseño + teoría + bibliografía
-  deep-pta.md                 → overview
-  deep-pta-interpretacion-*   → diseño completo
-  plan-implementacion.md      → plan detallado (fórmulas, mermaid, rangos)
-  referencias.md              → bibliografía con claves [clave]
-  teoria-pta.md               → repaso teórico por fase
+documentation/                → diseño + teoría + reportes (orden NN_<slug>.md)
+  README.md                                    → índice de la carpeta
+  01_overview.md                               → overview del proyecto
+  02_diseno_interpretacion_pruebas_presion.md  → diseño completo
+  03_plan_implementacion.md                    → plan detallado (fórmulas, mermaid, rangos)
+  04_referencias.md                            → bibliografía con claves [clave]
+  05_teoria_pta.md                             → repaso teórico por fase
+  06-08_reporte_*.md                           → reportes (no-unicidad, accuracy, sim-to-real)
+  09_posts_linkedin.md                         → borradores de posts
+aprendizaje/                  → material de estudio atómico (target de /study)
 docs/                         → reservado para GitHub Pages
 src/deep_pta/
-  engine/   → stehfest, laplace_base, reservoir_models, fractures, boundaries, solution
-  data/     → sampling, realism, bourdet, representation, generator
-  models/   → resnet1d, patchtst, losses
-  train/    → train_cnn, hpo, compare
-  app/      → app, narrator
-tests/      → test_stehfest, test_engine_typecurves, test_engine_vs_anaflow,
-              test_sampling, test_bourdet, test_generator, test_train_smoke
-data/       → synthetic_test.h5 (gitignored), real/ (casos)
-outputs/    → figuras, matrices de confusión, mapas de atención (gitignored)
+  engine/   → stehfest, laplace_base, reservoir_models, fractures, boundaries, solution, gpu_engine
+  data/     → sampling, realism, bourdet, representation, generator, real_cases
+  models/   → resnet1d, patchtst, losses, ensemble
+  train/    → train_cnn, config, dataset, hpo, compare, run
+  app/      → app, inference, narrator
+tests/      → suite pytest (motor certificado, generador, canales, modelos, GPU)
+data/       → sets congelados .h5 (gitignored), real/ (casos)
+outputs/    → figuras, ablations, métricas, TensorBoard (gitignored)
 models/     → checkpoints entrenados (gitignored)
+debug/      → scripts de investigación dbg_* (gitignored)
 ```
 
 ## Phases
@@ -45,7 +49,7 @@ models/     → checkpoints entrenados (gitignored)
 - [x] Configurar la base claude-project-base en .claude/ (rules, skills, agents, hooks) (2026-06-05)
 - [x] Inicializar git y .gitignore (2026-06-05)
 - [x] Configurar entorno Python: pyproject.toml + uv, deps base (numpy, scipy, h5py, pytest, ruff, mypy, matplotlib) (pyproject.toml) (2026-06-05)
-- [x] Escribir nota de estudio con la teoría mínima por fase (documentation/teoria-pta.md) (2026-06-05)
+- [x] Escribir nota de estudio con la teoría mínima por fase (documentation/05_teoria_pta.md) (2026-06-05)
 - [x] Reubicar plan-implementacion.md y referencias.md a documentation/ (2026-06-05)
 - ~~Crear devcontainer + Dockerfile con CUDA para WSL2~~ (discarded 2026-06-05: infraestructura local opcional, se documenta no se construye; el motor corre en CPU y el entrenamiento usa la RTX 4080 ya disponible en WSL2)
 
@@ -83,7 +87,7 @@ models/     → checkpoints entrenados (gitignored)
 - [ ] Transcribir casos tabulados de Lee y Horne [Lee1982][Horne1995] (data/real/) (requiere fuentes externas)
 - [ ] Digitalizar 10-15 casos clásicos con WebPlotDigitizer [Bourdet2002] (data/real/) (requiere fuentes externas)
 - [ ] Extraer DSTs del dataset Volve (Equinor) (data/real/) (requiere fuentes externas)
-- [x] Reporte sim-to-real: metodología + baseline sintético (documentation/reporte-sim-to-real.md) (2026-06-05)
+- [x] Reporte sim-to-real: metodología + baseline sintético (documentation/08_reporte_sim_to_real.md) (2026-06-05)
 - [ ] Redactar post LinkedIn #2 (documentation/)
 
 ### Phase 5 — App + cierre
@@ -127,7 +131,7 @@ models/     → checkpoints entrenados (gitignored)
 
 ## Conventions
 - Código e identificadores en inglés; docstrings NumPy style con clave [clave] de la fuente; planes y bitácoras en español.
-- Diseño de referencia: documentation/plan-implementacion.md (fórmulas, mermaid, rangos) y documentation/referencias.md (bibliografía con claves).
+- Diseño de referencia: documentation/03_plan_implementacion.md (fórmulas, mermaid, rangos) y documentation/04_referencias.md (bibliografía con claves).
 - Carpetas de código (src/, tests/, data/, models/, outputs/) se crean cuando la fase las necesita, no antes.
 - Gate de verificación por tarea: pytest -q, mypy src/, ruff check ., ruff format --check .
 - Gate reforzado de Fase 1: el motor debe estar certificado (Stehfest analítico + pendientes diagnósticas; AnaFlow donde haya red) ANTES de entrenar cualquier modelo.

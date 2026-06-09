@@ -20,7 +20,7 @@ same Bourdet + representation pipeline as the synthetic data.
    (2002) `[Bourdet2002]` (~30-45 min each).
 3. **Volve (Equinor, open)** — extract DST pressures from the public reports.
 
-Target: 20-30 cases. See `documentation/referencias.md` for the citation keys.
+Target: 20-30 cases. See `documentation/04_referencias.md` for the citation keys.
 
 ## Files here
 

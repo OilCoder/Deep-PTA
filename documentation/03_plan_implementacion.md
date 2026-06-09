@@ -9,7 +9,7 @@ type: plan
 
 > Plan ejecutable de las 5 fases con las fórmulas del motor, el layout de archivos, los
 > gates de verificación y la **bibliografía por módulo**. Las claves `[clave]` remiten a
-> `documentation/referencias.md`. Idioma: español (plan/bitácora); el código y sus
+> `documentation/04_referencias.md`. Idioma: español (plan/bitácora); el código y sus
 > identificadores van en inglés con docstrings NumPy style (`CLAUDE.md`).
 
 ## 1. Contexto y objetivo
@@ -61,7 +61,7 @@ entrenamiento. Es la regla dura del proyecto.
 flowchart TD
     subgraph F0["Fase 0 — Entorno (remoto, CPU)"]
         PY["pyproject.toml + uv\nnumpy scipy h5py pytest mypy ruff"]
-        TH["documentation/teoria-pta.md\n(repaso por fase)"]
+        TH["documentation/05_teoria_pta.md\n(repaso por fase)"]
     end
     subgraph F1["Fase 1 — Motor + generador (remoto, CPU) · GATE certificación"]
         ST["stehfest.py — inversión [Stehfest1970]"]
@@ -136,7 +136,7 @@ outputs/     figuras, matrices de confusión, mapas de atención (gitignored)
    - **Ya creado en esta rama**, junto con `src/deep_pta/__init__.py`.
 2. **`uv venv && uv sync`** (base + dev). Extras `[ml]`/`[validation]` se instalan en
    local; en remoto se pueden omitir (`pytest.importorskip` cubre AnaFlow).
-3. **`documentation/teoria-pta.md`** — repaso teórico mínimo por fase: regímenes de
+3. **`documentation/05_teoria_pta.md`** — repaso teórico mínimo por fase: regímenes de
    flujo y pendientes en la derivada (radial = nivel constante; lineal = ½; bilineal =
    ¼; frontera = duplicación/caída/unitaria), Bourdet `[Bourdet1989]`, Stehfest
    `[Stehfest1970]`, Warren-Root `[WarrenRoot1963]`, fracturas `[Gringarten1974]`
@@ -343,7 +343,7 @@ Plan escalonado (~2–3 días):
 
 Formato homogéneo CSV `(t, p)` + ground truth en JSON. Meta **20–30 casos**.
 
-- **`documentation/reporte-sim-to-real.md`** — accuracy sintético vs real, reportando
+- **`documentation/08_reporte_sim_to_real.md`** — accuracy sintético vs real, reportando
   **ambos**. El gap sim-to-real ES un hallazgo publicable, no un fracaso. Mitigación de
   fuera-de-taxonomía: cabeza de incertidumbre/entropía para señalar baja confianza.
 - Post LinkedIn #2.
@@ -418,4 +418,4 @@ verificación en cada tarea y el gate reforzado de certificación al cierre de l
 | 4 validación | data/real | `[Lee1982]` `[Horne1995]` `[Bourdet2002]` |
 | ext. futura | TDS/elíptico | `[Tiab1995]` `[Escobar]` |
 
-Bibliografía completa en **`documentation/referencias.md`**.
+Bibliografía completa en **`documentation/04_referencias.md`**.

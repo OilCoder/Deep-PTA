@@ -174,3 +174,63 @@ validado contra el certificado) subieron el yacimiento honesto de 0.51 a 0.64 y 
 MAE casi a la mitad, con extrapolación reportada por separado. El siguiente lever ya no es
 más datos ni más capacidad, sino **romper la no-unicidad homogéneo↔inf-fractura** (features
 físicas adicionales o tareas auxiliares) y la **validación con datos reales**.
+
+---
+
+# Ciclo v3 — prototipo (2026-06-09): canales físicos sep + slope
+
+El v2 cerró con el diagnóstico "el siguiente lever son features físicas". El prototipo v3
+lo valida con el mínimo costo antes de comprometer el ciclo completo.
+
+## Diagnóstico raíz
+
+La estandarización per-curva de los canales 0-1 (presión y derivada) **destruye la
+separación** `log10(Δp) − log10(Δp′)` — el discriminador manual clásico del par
+homogéneo↔inf-fractura: vale `0` sobre la recta unitaria de storage, **exactamente
+`log10(2) ≈ 0.30`** durante el flujo lineal de fractura (`Δp ∝ √t ⇒ Δp′ = Δp/2`), y crece
+como `log10(ln t)` en flujo radial. El modelo literalmente no podía reconstruirla a partir
+de los canales estandarizados.
+
+## Cambios
+
+- **Canal `sep`**: separación presión-derivada en la malla de 256, normalizada por
+  constantes fijas (NO per-curva: el nivel absoluto ES la señal), con clip raw `[-1, 3]`
+  (sin clip explota a ±15 raw cuando la derivada se desploma en frontera de presión
+  constante o toca el floor del log bajo ruido).
+- **Canal `slope`**: pendiente log-log local de la derivada (derivar con `np.gradient` →
+  suavizar con media móvil de 9 → clip ±2). Lee el régimen de flujo directamente
+  (1 storage, ½ lineal, ¼ bilineal, 0 radial) y es **invariante a traslaciones en log-t**
+  → palanca estructural de extrapolación a storage alto.
+- **Plumbing de superset**: un solo H5 de 5 canales sirve control (slice a 3) y
+  tratamiento (`FrozenH5Dataset(channel_idx=...)`, `TrainConfig.channels`). Tests
+  analíticos cerrados (slope lee 0.5 exacto sobre `Δp′ ∝ √t`; sep lee `log10(2)`).
+- **Sets v3 con las mismas semillas que v2** → mismas muestras físicas, solo con 2
+  canales más; el control 3ch es directamente comparable con la historia v2.
+
+## Resultado del prototipo (15k steps, 300k curvas, ResNet32, 2 semillas)
+
+| Métrica | Control 3ch | 5ch sep+slope | Δ |
+|---|---|---|---|
+| Bal-acc yacimiento (in-dist) | 0.585 | 0.610 | **+0.025** |
+| Bal-acc frontera (in-dist) | 0.717 | 0.733 | +0.017 |
+| MAE | 0.526 | 0.455 | **−0.071** |
+| Extrapolación yacimiento | 0.532 | 0.570 | **+0.038** |
+| Extrapolación MAE | 0.758 | 0.663 | **−0.096** |
+| Recall homogéneo | 0.433 | 0.537 | **+0.103** |
+| Recall inf-fractura | 0.492 | 0.477 | −0.015 (ruido) |
+
+Gate dual-seed (+0.01) **superado** con margen (+0.025). Filas en
+`outputs/ablation/proto_v3_*.json`.
+
+## Lectura
+
+- **Una feature física > 4.7M de curvas**: el salto 2M→5M del v2 dio +0.02; sep+slope dan
+  +0.025 con 300k curvas y 15k steps, y además mueven lo que los datos solos no movieron:
+  extrapolación (+0.038) y MAE (−0.071 / −0.096).
+- La mejora de extrapolación es el **efecto predicho** del canal slope (invariancia a
+  log-t) y se confirmó.
+- El recall de homogéneo (la clase más débil) saltó +0.103; inf-fractura quedó plana — la
+  frontera de decisión del par se movió a favor del homogéneo sin colapsar la fractura.
+- **Pendiente (Parte D del ciclo, no ejecutada aún)**: canales a escala 2M/5M, cabeza
+  auxiliar de regímenes de flujo, ataque directo al par confundido, ensemble calibrado.
+  Objetivo: yacimiento ≥0.70 in-dist. El plan vive en `todo/PLAN.md` (Phase 8).

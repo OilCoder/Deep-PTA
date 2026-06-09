@@ -5,8 +5,8 @@ derivative curve (log-log) and diagnoses the reservoir model, the boundary, and 
 key parameters (k·h, S, C, ω, λ, L, x_f) — the senior interpreter's job, automated.
 Includes an interactive app (CSV → diagnosis) and an optional LLM narrator agent.
 
-Design source of truth: `documentation/deep-pta.md` (project overview) and
-`documentation/deep-pta-interpretacion-pruebas-presion.md` (full design — data,
+Design source of truth: `documentation/01_overview.md` (project overview) and
+`documentation/02_diseno_interpretacion_pruebas_presion.md` (full design — data,
 formulas, model, limitations, closed decisions).
 
 ## How this project is governed
@@ -74,4 +74,4 @@ Headline (ResNet32+PatchTST ensemble, in-dist stratified test): reservoir bal-ac
 **0.649**, boundary **0.765**, MAE **0.357**; extrapolation stress test 0.553/0.733.
 Validation mode: `warn`. Next: v3 cycle — physics-informed channels (Δp−Δp′
 separation + local slope) to break the homogeneous↔inf-fracture confusion.
-See `todo/PLAN.md` and `documentation/reporte-mejora-accuracy.md`.
+See `todo/PLAN.md` and `documentation/07_reporte_mejora_accuracy.md`.

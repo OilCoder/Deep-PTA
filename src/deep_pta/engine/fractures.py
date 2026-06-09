@@ -10,7 +10,7 @@ Two fractured-well models, each returning a bare sandface solution
   slope. Implemented as the uniform-flux solution plus a bilinear early-time term
   scaled by the dimensionless fracture conductivity ``F_CD``. This reproduces the
   diagnostic 1/4 slope; it is a slope-faithful approximation of the full Cinco-Ley
-  solution (see ``documentation/plan-implementacion.md``).
+  solution (see ``documentation/03_plan_implementacion.md``).
 
 References
 ----------

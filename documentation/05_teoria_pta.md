@@ -1,7 +1,7 @@
 # Teoría mínima de PTA por fase
 
 Nota de estudio: la física justa para leer y construir cada fase del proyecto. Las claves
-`[clave]` remiten a `documentation/referencias.md`. El diagnóstico de PTA se hace sobre la
+`[clave]` remiten a `documentation/04_referencias.md`. El diagnóstico de PTA se hace sobre la
 **derivada de Bourdet** en log-log, porque cada régimen de flujo deja una **pendiente
 característica** que el ojo del intérprete (y la red) reconoce.
 

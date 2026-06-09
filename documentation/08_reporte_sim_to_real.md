@@ -2,7 +2,7 @@
 
 Documento de validación de la Fase 4: cómo se mide el desempeño del modelo y qué tan
 bien transfiere del dataset sintético a casos reales. Las claves `[clave]` remiten a
-`documentation/referencias.md`.
+`documentation/04_referencias.md`.
 
 ## 1. Métricas
 

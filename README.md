@@ -7,9 +7,9 @@ automated. Trained on a 100% synthetic dataset produced by a **certified** analy
 engine (Laplace solutions + Stehfest inversion). Ships with an interactive app
 (CSV → diagnosis) and an optional LLM narrator agent.
 
-Design source of truth: `documentation/deep-pta.md`,
-`documentation/deep-pta-interpretacion-pruebas-presion.md`,
-`documentation/plan-implementacion.md`, and `documentation/referencias.md`.
+Design source of truth: `documentation/01_overview.md`,
+`documentation/02_diseno_interpretacion_pruebas_presion.md`,
+`documentation/03_plan_implementacion.md`, and `documentation/04_referencias.md`.
 
 ## What works
 
@@ -54,7 +54,7 @@ Per-class reservoir recall: homogeneous 0.12 → 0.59, double-porosity 0.51 → 
 residual ceiling is the physical homogeneous↔infinite-fracture non-uniqueness. Capacity is
 **not** the bottleneck (a 2× larger model matched the small one); data was. The best single
 model (ResNet-1D on 5M) scores 0.638 reservoir / 0.750 boundary on its own. Full method and
-ablation: `documentation/reporte-mejora-accuracy.md`.
+ablation: `documentation/07_reporte_mejora_accuracy.md`.
 
 ## Run it
 

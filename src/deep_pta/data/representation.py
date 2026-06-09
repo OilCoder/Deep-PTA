@@ -37,8 +37,14 @@ _LOG_T_STD = 3.0
 
 # Fixed normalization for the separation channel: 0 (storage) .. ~2 (late radial),
 # so center at 0.5 and scale by 0.5. NOT per-curve, the absolute level IS the signal.
+# The raw separation is clipped to its informative physical band first: when the
+# derivative plunges (constant-pressure boundary) or noise drives it to the log
+# floor, log10(dp) - log10(dp') blows up to +/-15 and would swamp the input scale;
+# "the derivative died" is already carried by the d and slope channels.
 _SEP_MEAN = 0.5
 _SEP_STD = 0.5
+_SEP_RAW_MIN = -1.0
+_SEP_RAW_MAX = 3.0
 
 # The slope channel is clipped to this physical band (unit slope = 1, noise spikes
 # beyond +/-2 carry no regime information) and used unscaled: it is already O(1).
@@ -129,7 +135,8 @@ def build_representation(
     channels = [_standardize(log_p), _standardize(log_d), (log_t - _LOG_T_MEAN) / _LOG_T_STD]
     for name in extra_channels:
         if name == "sep":
-            channels.append((log_p - log_d - _SEP_MEAN) / _SEP_STD)
+            sep_raw = np.clip(log_p - log_d, _SEP_RAW_MIN, _SEP_RAW_MAX)
+            channels.append((sep_raw - _SEP_MEAN) / _SEP_STD)
         elif name == "slope":
             channels.append(_slope_channel(log_t, log_d))
         else:

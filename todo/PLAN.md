@@ -109,9 +109,21 @@ models/     → checkpoints entrenados (gitignored)
 - [x] Entrenamiento a escala — ResNet32 sobre 2M (0.618) y 5M (0.638); ResNet64 (≈0.633); ensemble (0.644) (2026-06-08)
 - [x] Ensemble — wrapper softmax + fusión por precisión (src/deep_pta/models/ensemble.py) (2026-06-08)
 - [x] Cierre v2 — tabla de ablations v2, reporte, README, GitHub Pages, métricas y figuras (documentation/, docs/, README.md) (2026-06-08)
-- [ ] Romper no-unicidad homogéneo↔inf-fractura (features físicas extra o tareas auxiliares)
+- ~~Romper no-unicidad homogéneo↔inf-fractura (features físicas extra o tareas auxiliares)~~ (discarded 2026-06-09: promovido a Phase 8 — ciclo v3 con canales físicos)
 - [ ] Validación con datos reales (Lee/Horne/Volve/WebPlotDigitizer); infra real_cases.py lista
-- [ ] Arreglar matcher del hook PreToolUse (.claude) que da falsos positivos (--no-verify/pkill/until)
+- [x] Arreglar matcher del hook PreToolUse (.claude) que da falsos positivos (--no-verify/pkill/until) (.claude/hooks/block-dangerous.{sh,py}, probado 30/30 standalone) (2026-06-09)
+
+### Phase 8 — Ciclo v3: canales físicos + ataque al par confundido (2026-06-09)
+- [x] Parte A: verificar métricas embarcadas — single y ensemble reproducen ±0.005 en ambos tests (debug/dbg_verify_metrics.py) (2026-06-09)
+- [x] Parte B: sync .claude con upstream v0.3.0 — capa aprendizaje/ + /study + learn:, agentes con Bash, modo warn, CLAUDE.md actualizado (2026-06-09)
+- [x] Canales físicos sep (separación Δp−Δp′, clip [-1,3]) y slope (pendiente log-log local) con tests analíticos + plumbing de superset de canales (src/deep_pta/data/representation.py, generator.py, train/dataset.py, config.py, train_cnn.py) (2026-06-09)
+- [x] Sets v3 del prototipo: 300k train 5ch (motor GPU, 53 s) + val/test/extrap estratificados 5ch con mismas semillas que v2 (debug/dbg_make_stratified_v3.py) (2026-06-09)
+- [x] Prototipo gate dual-seed: 5ch vs control 3ch a 15k steps — Δ yacimiento +0.025, extrap +0.038, MAE −0.071, homogéneo +0.103 → GATE SUPERADO (outputs/ablation/proto_v3_*.json) (2026-06-09)
+- [ ] E16: canales a escala — superset 2M v3 (5ch + labels de régimen, float16 validado round-trip) + 4 filas de ablation 40k (control/sep/slope/sep+slope)
+- [ ] E17: cabeza auxiliar de segmentación de regímenes de flujo (labels analíticos del motor limpio) (src/deep_pta/data/generator.py, models/resnet1d.py, models/losses.py)
+- [ ] E18: ataque al par confundido — cabeza binaria homog↔inf-frac, quemar oversampling, label smoothing (4 filas)
+- [ ] E19: extrapolación + ensemble calibrado por temperatura + corridas finales 5M (objetivo: yacimiento ≥0.70 in-dist, extrap ≥0.60, MAE ≤0.36)
+- [ ] E20: embarque y cierre — inference/app con in_channels nuevo, concentración re-medida, tabla v3, reporte, README, Pages, notas aprendizaje/
 
 ## Conventions
 - Código e identificadores en inglés; docstrings NumPy style con clave [clave] de la fuente; planes y bitácoras en español.

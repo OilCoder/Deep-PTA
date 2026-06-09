@@ -18,11 +18,34 @@ import torch
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
+from deep_pta.data.representation import EXTRA_CHANNELS
 from deep_pta.data.sampling import N_BOUNDARY, N_RESERVOIR
 from deep_pta.models.losses import LossWeights, multitask_loss
 from deep_pta.models.resnet1d import ResNet1D
 from deep_pta.train.config import TrainConfig
 from deep_pta.train.dataset import FrozenH5Dataset, OnTheFlyDataset
+
+
+def channel_index(channels: tuple[str, ...] | None) -> tuple[int, ...]:
+    """Map a config ``channels`` tuple to stored-channel indices of a superset H5.
+
+    The canonical storage layout is the 3 base channels followed by
+    :data:`~deep_pta.data.representation.EXTRA_CHANNELS` in order, so e.g.
+    ``("sep", "slope")`` maps to ``(0, 1, 2, 3, 4)`` and ``None`` (legacy
+    3-channel input) maps to ``(0, 1, 2)``.
+
+    Parameters
+    ----------
+    channels : tuple of str or None
+        Extra channel names from :class:`~deep_pta.train.config.TrainConfig`.
+
+    Returns
+    -------
+    tuple of int
+        Indices into the stored ``x`` channel axis.
+    """
+    extras = tuple(3 + EXTRA_CHANNELS.index(name) for name in (channels or ()))
+    return (0, 1, 2, *extras)
 
 
 def get_device() -> torch.device:
@@ -194,7 +217,10 @@ def _class_metrics(cm: np.ndarray) -> dict[str, object]:
 
 @torch.no_grad()
 def evaluate(
-    model: nn.Module, test_h5: str, device: torch.device | None = None
+    model: nn.Module,
+    test_h5: str,
+    device: torch.device | None = None,
+    channel_idx: tuple[int, ...] | None = None,
 ) -> dict[str, object]:
     """Evaluate per-head accuracy and confusion matrices on the frozen test set.
 
@@ -206,6 +232,9 @@ def evaluate(
         Path to the frozen test-set HDF5 file.
     device : torch.device, optional
         Evaluation device; defaults to the model's device.
+    channel_idx : tuple of int, optional
+        Stored channels to keep (for running a reduced-channel model on a
+        channel-superset H5). ``None`` keeps all stored channels.
 
     Returns
     -------
@@ -218,7 +247,7 @@ def evaluate(
         ``support_reservoir``, ``support_boundary``.
     """
     device = device or next(model.parameters()).device
-    ds = FrozenH5Dataset(test_h5)
+    ds = FrozenH5Dataset(test_h5, channel_idx=channel_idx)
     loader = DataLoader(ds, batch_size=256)
     model.eval()
 
@@ -317,9 +346,13 @@ def fit(
     """
     torch.manual_seed(cfg.seed)
     device = get_device()
+    ch_idx = channel_index(cfg.channels)
     if model is None:
         model = ResNet1D(
-            base_channels=cfg.base_channels, n_blocks=cfg.n_blocks, dropout=cfg.dropout
+            in_channels=len(ch_idx),
+            base_channels=cfg.base_channels,
+            n_blocks=cfg.n_blocks,
+            dropout=cfg.dropout,
         )
     model = model.to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
@@ -339,7 +372,7 @@ def fit(
     if cfg.train_h5 is not None:
         # Frozen training set: shuffle and cycle (fast; fixed augmentation).
         loader = DataLoader(
-            FrozenH5Dataset(cfg.train_h5),
+            FrozenH5Dataset(cfg.train_h5, channel_idx=ch_idx),
             batch_size=cfg.batch_size,
             shuffle=True,
             num_workers=cfg.num_workers,
@@ -355,6 +388,7 @@ def fit(
             res_accept=cfg.res_sample_weights,
             cd_max_log_schedule=cfg.cd_max_log_schedule,
             total_steps=cfg.n_steps,
+            extra_channels=cfg.channels or (),
         )
         loader = DataLoader(
             on_the_fly,
@@ -400,7 +434,7 @@ def fit(
             writer.add_scalar("train/lr", scheduler.get_last_lr()[0], step)
 
         if step > 0 and step % cfg.eval_every == 0:
-            val = evaluate(model, cfg.val_h5, device=device)
+            val = evaluate(model, cfg.val_h5, device=device, channel_idx=ch_idx)
             score = 0.5 * (
                 float(val["bal_acc_reservoir"]) + float(val["bal_acc_boundary"])  # type: ignore[arg-type]
             )
@@ -428,8 +462,8 @@ def fit(
     if best_step < 0:  # never evaluated (tiny run): save final state
         save_checkpoint(model, cfg.ckpt_path)
     model.load_state_dict(torch.load(cfg.ckpt_path, map_location=device))
-    best_val = evaluate(model, cfg.val_h5, device=device)
-    test = evaluate(model, cfg.test_h5, device=device)
+    best_val = evaluate(model, cfg.val_h5, device=device, channel_idx=ch_idx)
+    test = evaluate(model, cfg.test_h5, device=device, channel_idx=ch_idx)
     if writer is not None:
         writer.close()
     return {"best_val": best_val, "test": test, "best_step": best_step, "history": history}

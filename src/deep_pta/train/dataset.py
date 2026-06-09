@@ -56,6 +56,9 @@ class OnTheFlyDataset(IterableDataset[dict[str, Tensor]]):
     total_steps : int, optional
         Total optimization steps, used to map per-worker progress to the curriculum
         ramp; defaults to ``epoch_size``-derived progress when ``None``.
+    extra_channels : tuple of str, optional
+        Physics-informed channels appended to the base 3 (``"sep"``, ``"slope"``);
+        forwarded to the generator. Default ``()`` keeps the legacy 3-channel input.
     """
 
     def __init__(
@@ -66,6 +69,7 @@ class OnTheFlyDataset(IterableDataset[dict[str, Tensor]]):
         res_accept: tuple[float, ...] | None = None,
         cd_max_log_schedule: tuple[float, float, float] | None = None,
         total_steps: int | None = None,
+        extra_channels: tuple[str, ...] = (),
     ) -> None:
         super().__init__()
         self.epoch_size = epoch_size
@@ -74,6 +78,7 @@ class OnTheFlyDataset(IterableDataset[dict[str, Tensor]]):
         self.res_accept = res_accept
         self.cd_max_log_schedule = cd_max_log_schedule
         self.total_steps = total_steps
+        self.extra_channels = extra_channels
 
     def _cd_max(self, progress: float) -> float | None:
         """Curriculum ``C_D`` cap for a given epoch ``progress`` in ``[0, 1)``."""
@@ -94,7 +99,7 @@ class OnTheFlyDataset(IterableDataset[dict[str, Tensor]]):
         while produced < n:
             cd_max = self._cd_max(produced / n)
             try:
-                sample = generate_sample(rng, cd_max=cd_max)
+                sample = generate_sample(rng, cd_max=cd_max, extra_channels=self.extra_channels)
             except RuntimeError:
                 # A rare degenerate draw must not kill the worker; skip it.
                 continue
@@ -115,15 +120,22 @@ class FrozenH5Dataset(Dataset[dict[str, Tensor]]):
     ----------
     path : str
         Path to the ``.h5`` file produced by ``export_frozen_test_set``.
+    channel_idx : tuple of int, optional
+        Channels of ``x`` to keep (e.g. ``(0, 1, 2)`` to run a 3-channel control
+        on a 5-channel superset). ``None`` (default) keeps all stored channels.
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, channel_idx: tuple[int, ...] | None = None) -> None:
         with h5py.File(path, "r") as f:
             self.x = f["x"][:]
             self.y_reservoir = f["y_reservoir"][:]
             self.y_boundary = f["y_boundary"][:]
             self.targets = f["targets"][:]
             self.mask = f["mask"][:]
+        # Slice only when it changes anything: fancy indexing copies the full
+        # array, which a 15 GB train set cannot afford for a no-op.
+        if channel_idx is not None and tuple(channel_idx) != tuple(range(self.x.shape[1])):
+            self.x = np.ascontiguousarray(self.x[:, list(channel_idx), :])
 
     def __len__(self) -> int:
         """Return the number of stored samples."""

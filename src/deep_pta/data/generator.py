@@ -131,7 +131,10 @@ def split_of(cp: CurveParams) -> str:
 
 
 def generate_sample(
-    rng: np.random.Generator, max_retries: int = 20, cd_max: float | None = None
+    rng: np.random.Generator,
+    max_retries: int = 20,
+    cd_max: float | None = None,
+    extra_channels: tuple[str, ...] = (),
 ) -> dict[str, object]:
     """Generate one labelled sample, retrying on degenerate draws.
 
@@ -144,12 +147,16 @@ def generate_sample(
     cd_max : float, optional
         Upper bound on wellbore storage ``C_D`` for the draw (curriculum); forwarded
         to :func:`~deep_pta.data.sampling.sample_curve`. ``None`` uses the full range.
+    extra_channels : tuple of str, optional
+        Physics-informed channels appended to the base 3 (``"sep"``, ``"slope"``);
+        forwarded to :func:`~deep_pta.data.representation.build_representation`.
 
     Returns
     -------
     dict
-        Keys: ``x`` (3 x 256 float32), ``y_reservoir`` (int), ``y_boundary`` (int),
-        ``targets`` (float64 [7]), ``mask`` (bool [7]), ``split`` (str).
+        Keys: ``x`` ((3 + n_extra) x 256 float32), ``y_reservoir`` (int),
+        ``y_boundary`` (int), ``targets`` (float64 [7]), ``mask`` (bool [7]),
+        ``split`` (str).
 
     Raises
     ------
@@ -172,7 +179,7 @@ def generate_sample(
             t_der, deriv = bourdet_derivative(t_obs, p_obs, l_window)
             if t_der.size < N_GRID // 8:
                 continue
-            x = build_representation(t_obs, p_obs, t_der, deriv)
+            x = build_representation(t_obs, p_obs, t_der, deriv, extra_channels=extra_channels)
         except (ValueError, KeyError, ZeroDivisionError):
             continue
         if not np.all(np.isfinite(x)):
@@ -188,7 +195,13 @@ def generate_sample(
     raise RuntimeError("failed to generate a valid sample within max_retries")
 
 
-def export_frozen_test_set(path: str, n: int, seed: int = 0, split: str = "test") -> int:
+def export_frozen_test_set(
+    path: str,
+    n: int,
+    seed: int = 0,
+    split: str = "test",
+    extra_channels: tuple[str, ...] = (),
+) -> int:
     """Generate ``n`` samples from one split and write them to an HDF5 file.
 
     Parameters
@@ -201,6 +214,9 @@ def export_frozen_test_set(path: str, n: int, seed: int = 0, split: str = "test"
         Base seed, by default 0.
     split : str, optional
         Which disjoint split to draw from, by default ``"test"``.
+    extra_channels : tuple of str, optional
+        Physics-informed channels appended to the base 3 (see
+        :func:`~deep_pta.data.representation.build_representation`).
 
     Returns
     -------
@@ -211,7 +227,7 @@ def export_frozen_test_set(path: str, n: int, seed: int = 0, split: str = "test"
     xs: list[NDArray[np.float32]] = []
     y_res, y_bnd, tgts, masks = [], [], [], []
     while len(xs) < n:
-        sample = generate_sample(rng)
+        sample = generate_sample(rng, extra_channels=extra_channels)
         if sample["split"] != split:
             continue
         xs.append(sample["x"])  # type: ignore[arg-type]
@@ -230,6 +246,7 @@ def export_stratified_set(
     seed: int = 0,
     split: str = "test",
     max_draws: int = 2_000_000,
+    extra_channels: tuple[str, ...] = (),
 ) -> int:
     """Export a class-balanced frozen set (equal samples per reservoir×boundary cell).
 
@@ -250,6 +267,9 @@ def export_stratified_set(
         by default ``"test"``.
     max_draws : int, optional
         Safety cap on total draws before giving up, by default 2_000_000.
+    extra_channels : tuple of str, optional
+        Physics-informed channels appended to the base 3 (see
+        :func:`~deep_pta.data.representation.build_representation`).
 
     Returns
     -------
@@ -278,7 +298,7 @@ def export_stratified_set(
             }
             raise RuntimeError(f"stratified export hit max_draws with cells short: {missing}")
         draws += 1
-        sample = generate_sample(rng)
+        sample = generate_sample(rng, extra_channels=extra_channels)
         if sample["split"] != split:
             continue
         cell = (int(sample["y_reservoir"]), int(sample["y_boundary"]))  # type: ignore[call-overload]

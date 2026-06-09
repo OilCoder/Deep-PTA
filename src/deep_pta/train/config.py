@@ -51,6 +51,11 @@ class TrainConfig:
     cd_max_log_schedule : tuple of float or None
         ``(start_log, full_log, ramp_frac)`` low→high ``C_D`` curriculum for on-the-fly
         training; ``None`` disables it.
+    channels : tuple of str or None
+        Physics-informed extra channels appended to the base 3 (any of ``"sep"``,
+        ``"slope"``). ``None`` (default) keeps the legacy 3-channel input. Frozen
+        sets that store more channels are sliced down to the requested ones, so one
+        superset H5 serves both the control and the treatment runs.
     weights : LossWeights
         Relative weights of the three loss terms.
     train_h5 : str or None
@@ -84,6 +89,7 @@ class TrainConfig:
     use_class_weights: bool = False
     res_sample_weights: tuple[float, ...] | None = None
     cd_max_log_schedule: tuple[float, float, float] | None = None
+    channels: tuple[str, ...] | None = None
     weights: LossWeights = field(default_factory=LossWeights)
     train_h5: str | None = None
     val_h5: str = "data/synthetic_val.h5"

@@ -117,17 +117,21 @@ debug/      → scripts de investigación dbg_* (gitignored)
 - [ ] Validación con datos reales (Lee/Horne/Volve/WebPlotDigitizer); infra real_cases.py lista
 - [x] Arreglar matcher del hook PreToolUse (.claude) que da falsos positivos (--no-verify/pkill/until) (.claude/hooks/block-dangerous.{sh,py}, probado 30/30 standalone) (2026-06-09)
 
-### Phase 8 — Ciclo v3: canales físicos + ataque al par confundido (2026-06-09)
+### Phase 8 — Ciclo v3: canales físicos + banco comparativo de arquitecturas (2026-06-09)
 - [x] Parte A: verificar métricas embarcadas — single y ensemble reproducen ±0.005 en ambos tests (debug/dbg_verify_metrics.py) (2026-06-09)
 - [x] Parte B: sync .claude con upstream v0.3.0 — capa aprendizaje/ + /study + learn:, agentes con Bash, modo warn, CLAUDE.md actualizado (2026-06-09)
 - [x] Canales físicos sep (separación Δp−Δp′, clip [-1,3]) y slope (pendiente log-log local) con tests analíticos + plumbing de superset de canales (src/deep_pta/data/representation.py, generator.py, train/dataset.py, config.py, train_cnn.py) (2026-06-09)
 - [x] Sets v3 del prototipo: 300k train 5ch (motor GPU, 53 s) + val/test/extrap estratificados 5ch con mismas semillas que v2 (debug/dbg_make_stratified_v3.py) (2026-06-09)
 - [x] Prototipo gate dual-seed: 5ch vs control 3ch a 15k steps — Δ yacimiento +0.025, extrap +0.038, MAE −0.071, homogéneo +0.103 → GATE SUPERADO (outputs/ablation/proto_v3_*.json) (2026-06-09)
-- [ ] E16: canales a escala — superset 2M v3 (5ch + labels de régimen, float16 validado round-trip) + 4 filas de ablation 40k (control/sep/slope/sep+slope)
-- [ ] E17: cabeza auxiliar de segmentación de regímenes de flujo (labels analíticos del motor limpio) (src/deep_pta/data/generator.py, models/resnet1d.py, models/losses.py)
-- [ ] E18: ataque al par confundido — cabeza binaria homog↔inf-frac, quemar oversampling, label smoothing (4 filas)
-- [ ] E19: extrapolación + ensemble calibrado por temperatura + corridas finales 5M (objetivo: yacimiento ≥0.70 in-dist, extrap ≥0.60, MAE ≤0.36)
-- [ ] E20: embarque y cierre — inference/app con in_channels nuevo, concentración re-medida, tabla v3, reporte, README, Pages, notas aprendizaje/
+- ~~E17: cabeza auxiliar de segmentación de regímenes de flujo~~ (discarded 2026-06-09: reenfoque al estudio comparativo de arquitecturas — el foco del proyecto es evaluar qué tan bien interpretan, no maximizar un número; candidata a fase posterior)
+- ~~E18: ataque al par confundido (cabeza binaria, oversampling, label smoothing)~~ (discarded 2026-06-09: mismo reenfoque; candidata a fase posterior)
+- ~~E19: ensemble calibrado por temperatura + objetivo ≥0.70~~ (discarded 2026-06-09: el ensemble desplazaba el foco narrativo; pasa a nota al pie del estudio comparativo)
+- [ ] Superset 2M v3 (5ch, float16 con round-trip validado) como entrada común del banco + protocolo de condiciones idénticas (mismo fit/presupuesto/selección en val, 2 semillas) (debug/dbg_make_train_gpu.py)
+- [ ] Implementar contendientes nuevos: MoE 1D (gating top-2 + expertos conv, análisis de enrutamiento), InceptionTime-1D (kernels multi-escala), TCN (convs dilatadas), PatchTST-grande (pregunta de capacidad con entrada rica) (src/deep_pta/models/)
+- [ ] Correr el banco: 6 arquitecturas × 40k steps × 2 semillas sobre el superset 2M — tabla comparativa (bal-acc yac/front, MAE, extrapolación, recall por clase, params, throughput) (debug/dbg_train_ablation.py)
+- [ ] Análisis interpretable por arquitectura: mapas de atención (PatchTST), enrutamiento de expertos vs clase física (MoE), fortalezas/debilidades por clase y régimen — el entregable central del proyecto
+- [ ] Finalistas a 5M + respuesta a la pregunta de capacidad (¿la entrada de 5 canales desbloquea modelos grandes que con 3 canales aplanaban?)
+- [ ] Reencuadre del proyecto: README, GitHub Pages y reporte con la COMPARACIÓN de arquitecturas como cabecera; ensemble degradado a nota al pie; app de inferencia con el mejor intérprete individual
 
 ## Conventions
 - Código e identificadores en inglés; docstrings NumPy style con clave [clave] de la fuente; planes y bitácoras en español.

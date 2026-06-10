@@ -72,6 +72,10 @@ Pages only; `aprendizaje/` = study material (target of `/study`).
 GPU engine validated (4e-7), 5M-curve training sets, honest balanced metrics.
 Headline (ResNet32+PatchTST ensemble, in-dist stratified test): reservoir bal-acc
 **0.649**, boundary **0.765**, MAE **0.357**; extrapolation stress test 0.553/0.733.
-Validation mode: `warn`. Next: v3 cycle — physics-informed channels (Δp−Δp′
-separation + local slope) to break the homogeneous↔inf-fracture confusion.
-See `todo/PLAN.md` and `documentation/07_reporte_mejora_accuracy.md`.
+Validation mode: `warn`. The v3 physics channels (Δp−Δp′ separation + local slope)
+are validated (dual-seed prototype: +0.025 reservoir, +0.038 extrap). Next —
+**refocused on the project's core question**: a comparative architecture benchmark
+(ResNet, PatchTST, MoE, InceptionTime, TCN, large PatchTST) under identical
+conditions, measuring how well each interprets pressure tests (per-class strengths,
+attention maps, expert routing). The ensemble is demoted to a footnote.
+See `todo/PLAN.md` (Phase 8) and `documentation/07_reporte_mejora_accuracy.md`.

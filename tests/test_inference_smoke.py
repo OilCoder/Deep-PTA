@@ -34,6 +34,18 @@ def test_diagnose_output_structure() -> None:
     assert "C_D" in result["params"] and "S" in result["params"]
 
 
+def test_diagnose_with_physics_channels() -> None:
+    """The v3 input path: 5-channel representation feeds a 5-channel model."""
+    from deep_pta.models.tcn import TCN1D
+
+    model = TCN1D(in_channels=5, width=16, n_levels=4)
+    t, dp = _synthetic_series()
+    result = diagnose(model, t, dp, extra_channels=("sep", "slope"))
+    x = result["x"]
+    assert isinstance(x, np.ndarray) and x.shape == (5, 256)
+    assert 0 <= int(result["reservoir_class"]) < 4
+
+
 def test_reconstruct_derivative_is_finite() -> None:
     params = decode_params(np.array([2.0, 3.0, 0, 0, 0, 0, 0]), 0, 0)
     recon = reconstruct_derivative(0, 0, params)

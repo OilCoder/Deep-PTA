@@ -22,8 +22,9 @@ def representation_from_pressure(
     t: NDArray[np.float64],
     dp: NDArray[np.float64],
     l_window: float = 0.2,
+    extra_channels: tuple[str, ...] = (),
 ) -> NDArray[np.float32]:
-    """Build the 3-channel representation from a pressure-change series.
+    """Build the model input representation from a pressure-change series.
 
     Parameters
     ----------
@@ -33,14 +34,17 @@ def representation_from_pressure(
         Pressure change at each time.
     l_window : float, optional
         Bourdet smoothing window, by default 0.2.
+    extra_channels : tuple of str, optional
+        Physics-informed channels appended to the base 3 (``"sep"``, ``"slope"``);
+        computed from ``(t, dp)`` + Bourdet only, so real cases need nothing extra.
 
     Returns
     -------
     numpy.ndarray
-        Array of shape ``(3, 256)`` and dtype ``float32``.
+        Array of shape ``(3 + len(extra_channels), 256)`` and dtype ``float32``.
     """
     t_der, deriv = bourdet_derivative(t, dp, l_window)
-    return build_representation(t, dp, t_der, deriv)
+    return build_representation(t, dp, t_der, deriv, extra_channels=extra_channels)
 
 
 def load_real_case(csv_path: str) -> tuple[NDArray[np.float64], NDArray[np.float64]]:

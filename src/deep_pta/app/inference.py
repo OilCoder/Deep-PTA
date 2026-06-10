@@ -34,6 +34,12 @@ from deep_pta.engine.solution import (
 
 RES_NAMES = ("homogeneous", "double porosity", "inf-cond fracture", "fin-cond fracture")
 BND_NAMES = ("infinite", "sealing fault", "constant pressure", "closed")
+
+# Shipped interpreter (v3 benchmark winner): TCN trained on 5M 5-channel curves —
+# chosen for out-of-distribution robustness (extrap 0.62/0.81, near in-dist).
+DEFAULT_CHECKPOINT = "models/best.pt"
+DEFAULT_ARCH = "tcn"
+DEFAULT_EXTRA_CHANNELS = ("sep", "slope")
 _PARAM_KEYS = ("log_CD", "S", "log_omega", "log_lambda", "log_LD", "log_FCD", "log_reD")
 # Map each target name to the engine parameter name it decodes to.
 _OUT_KEY = {
@@ -126,7 +132,10 @@ def reconstruct_derivative(
 
 @torch.no_grad()
 def diagnose(
-    model: nn.Module, t: NDArray[np.float64], dp: NDArray[np.float64]
+    model: nn.Module,
+    t: NDArray[np.float64],
+    dp: NDArray[np.float64],
+    extra_channels: tuple[str, ...] = (),
 ) -> dict[str, object]:
     """Diagnose a pressure test from its ``(t, dp)`` series.
 
@@ -136,14 +145,18 @@ def diagnose(
         A trained model returning ``ModelOutput``.
     t, dp : numpy.ndarray
         Times and pressure change.
+    extra_channels : tuple of str, optional
+        Physics-informed channels the model was trained with (the shipped v3
+        interpreter uses :data:`DEFAULT_EXTRA_CHANNELS`). Default ``()`` keeps
+        the legacy 3-channel input.
 
     Returns
     -------
     dict
         ``reservoir``, ``boundary`` (names), ``reservoir_class``, ``boundary_class``,
-        ``confidence`` (0-1), ``params`` (decoded), and ``x`` (3 x 256 input).
+        ``confidence`` (0-1), ``params`` (decoded), and ``x`` (the model input).
     """
-    x = representation_from_pressure(t, dp)
+    x = representation_from_pressure(t, dp, extra_channels=extra_channels)
     device = next(model.parameters()).device
     model.eval()
     out = model(torch.from_numpy(x).unsqueeze(0).to(device))
@@ -164,24 +177,56 @@ def diagnose(
     }
 
 
-def load_model(checkpoint: str, base_channels: int = 32, n_blocks: int = 6) -> nn.Module:
-    """Load a trained ResNet1D from a checkpoint onto CPU.
+def load_model(
+    checkpoint: str = DEFAULT_CHECKPOINT,
+    arch: str = DEFAULT_ARCH,
+    in_channels: int = 3 + len(DEFAULT_EXTRA_CHANNELS),
+    base_channels: int = 32,
+    n_blocks: int = 6,
+) -> nn.Module:
+    """Load a trained interpreter from a checkpoint onto CPU.
 
     Parameters
     ----------
-    checkpoint : str
-        Path to the saved state dict.
+    checkpoint : str, optional
+        Path to the saved state dict; defaults to the shipped v3 interpreter.
+    arch : str, optional
+        One of ``"tcn"`` (shipped default), ``"resnet1d"``, ``"patchtst"``,
+        ``"patchtst_big"``.
+    in_channels : int, optional
+        Input channel count the checkpoint was trained with (5 for v3).
     base_channels, n_blocks : int, optional
-        Architecture used at training time.
+        ResNet capacity (only used for ``arch="resnet1d"``).
 
     Returns
     -------
     nn.Module
         The model in eval mode.
-    """
-    from deep_pta.models.resnet1d import ResNet1D
 
-    model = ResNet1D(base_channels=base_channels, n_blocks=n_blocks)
+    Raises
+    ------
+    ValueError
+        If ``arch`` is unknown.
+    """
+    model: nn.Module
+    if arch == "tcn":
+        from deep_pta.models.tcn import TCN1D
+
+        model = TCN1D(in_channels=in_channels)
+    elif arch == "resnet1d":
+        from deep_pta.models.resnet1d import ResNet1D
+
+        model = ResNet1D(in_channels=in_channels, base_channels=base_channels, n_blocks=n_blocks)
+    elif arch == "patchtst":
+        from deep_pta.models.patchtst import PatchTST1D
+
+        model = PatchTST1D(in_channels=in_channels)
+    elif arch == "patchtst_big":
+        from deep_pta.models.patchtst import PatchTST1D
+
+        model = PatchTST1D(in_channels=in_channels, d_model=256, n_heads=8, depth=8)
+    else:
+        raise ValueError(f"unknown arch {arch!r}")
     model.load_state_dict(torch.load(checkpoint, map_location="cpu"))
     model.eval()
     return model

@@ -11,7 +11,13 @@ from typing import Any, cast
 
 import numpy as np
 
-from deep_pta.app.inference import diagnose, load_model, reconstruct_derivative
+from deep_pta.app.inference import (
+    DEFAULT_CHECKPOINT,
+    DEFAULT_EXTRA_CHANNELS,
+    diagnose,
+    load_model,
+    reconstruct_derivative,
+)
 from deep_pta.data.real_cases import load_real_case
 
 
@@ -41,7 +47,7 @@ def _diagnose_csv(file_obj: Any, checkpoint: str) -> tuple[str, Any]:
 
     t, dp = load_real_case(file_obj.name if hasattr(file_obj, "name") else file_obj)
     model = load_model(checkpoint)
-    result = diagnose(model, t, dp)
+    result = diagnose(model, t, dp, extra_channels=DEFAULT_EXTRA_CHANNELS)
     x = result["x"]
     assert isinstance(x, np.ndarray)
     recon = reconstruct_derivative(
@@ -62,13 +68,13 @@ def _diagnose_csv(file_obj: Any, checkpoint: str) -> tuple[str, Any]:
     return _format_diagnosis(result), fig
 
 
-def build_demo(checkpoint: str = "models/cnn_baseline.pt") -> Any:
+def build_demo(checkpoint: str = DEFAULT_CHECKPOINT) -> Any:
     """Build the Gradio Blocks app.
 
     Parameters
     ----------
     checkpoint : str, optional
-        Path to the trained checkpoint, by default ``models/cnn_baseline.pt``.
+        Path to the trained checkpoint, by default the shipped v3 interpreter.
 
     Returns
     -------

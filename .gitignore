@@ -33,3 +33,7 @@ data/raw/
 # OS
 .DS_Store
 Thumbs.db
+
+# Personal/process folders — kept local, never published (user decision 2026-06-10)
+/todo/
+/aprendizaje/

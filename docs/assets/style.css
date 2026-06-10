@@ -1,0 +1,312 @@
+/* ============================================================
+   Deep PTA — hoja de estilos editorial (tipo Distill)
+   Paleta: "Distill clásico" — casi monocromo editorial con un
+   acento azul (enlaces/marca) y un naranja quemado (dato héroe).
+   Uso: todos los informes y páginas de resultados en docs/
+   ============================================================ */
+
+:root {
+  /* Roles de color (no nombres de color: si la paleta cambia, cambian aquí) */
+  --ink:        #1a1a1a;  /* prosa */
+  --ink-soft:   #4d4d4d;  /* texto secundario */
+  --ink-faint:  #6e6e6e;  /* leyendas, metadatos */
+  --paper:      #ffffff;
+  --paper-alt:  #f7f7f7;
+  --rule:       #e8e8e8;  /* reglas finas, bordes */
+
+  --accent:      #2962ff; /* enlaces, marca, reglas de sección, series de datos */
+  --accent-dark: #1c46b8;
+  --accent-tint: #eef3ff; /* hovers, fondos suaves */
+
+  --hero:        #bf5700; /* métrica héroe, mejor valor, hallazgos — escaso */
+  --hero-tint:   #fbf2ea; /* fondo del bloque de hallazgo, fila ganadora */
+
+  /* Tipografía */
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans:  "Source Sans 3", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono:  "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  --measure: 44rem;       /* ancho de lectura ~704px */
+  --measure-wide: 64rem;  /* figuras y tablas anchas */
+}
+
+/* ---------- base ---------- */
+* { box-sizing: border-box; }
+
+html { font-size: 17px; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Columna de lectura: todo hijo directo de article respeta la medida */
+article > * {
+  max-width: var(--measure);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+article > .wide { max-width: var(--measure-wide); }
+article > .full { max-width: none; padding: 0; }
+
+/* ---------- cabecera de informe (estilo byline Distill) ---------- */
+.masthead {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  max-width: none;
+}
+.masthead a { color: var(--accent); text-decoration: none; }
+
+h1.title {
+  font-size: 2.35rem;
+  line-height: 1.18;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 2.8rem auto 0.6rem;
+}
+
+p.lede {
+  font-size: 1.18rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin-top: 0.4rem;
+}
+
+.byline {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.7rem 1.25rem;
+  margin-top: 1.6rem;
+  margin-bottom: 2.6rem;
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+}
+.byline b {
+  display: block;
+  color: var(--ink-soft);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  margin-bottom: 0.15rem;
+}
+
+/* ---------- jerarquía ---------- */
+h2 {
+  font-family: var(--sans);
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-top: 3rem;
+  margin-bottom: 0.8rem;
+}
+h2::before {
+  content: "";
+  display: block;
+  width: 2.2rem;
+  height: 3px;
+  background: var(--accent);
+  margin-bottom: 0.9rem;
+}
+
+h3 {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent-dark);
+  margin-top: 2.2rem;
+  margin-bottom: 0.4rem;
+}
+
+a { color: var(--accent); text-decoration-color: var(--rule); text-underline-offset: 3px; }
+a:hover { color: var(--accent-dark); text-decoration-color: var(--accent-dark); }
+
+strong { font-weight: 700; }
+
+/* ---------- componentes ---------- */
+
+/* Métrica clave (callout de número) */
+.metrics {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.8rem auto;
+}
+.metric {
+  flex: 1 1 9rem;
+  background: var(--paper-alt);
+  border-top: 3px solid var(--accent);
+  padding: 0.9rem 1rem 0.8rem;
+}
+.metric.hero { border-top-color: var(--hero); }
+.metric .value {
+  font-family: var(--sans);
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.metric.hero .value { color: var(--hero); }
+.metric .label {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  margin-top: 0.25rem;
+}
+
+/* Nota al margen / aside (en pantallas anchas flota a la derecha) */
+.aside {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  background: var(--paper-alt);
+  border-left: 3px solid var(--rule);
+  padding: 0.7rem 0.9rem;
+  margin: 1.4rem auto;
+}
+@media (min-width: 75rem) {
+  article { position: relative; }
+  .aside {
+    position: absolute;
+    right: max(1rem, calc(50% - var(--measure) / 2 - 17rem));
+    width: 15rem;
+    margin: 0;
+    transform: translateY(-50%);
+  }
+}
+
+/* Bloque de hallazgo (resalte naranja) */
+.finding {
+  background: var(--hero-tint);
+  border-left: 3px solid var(--hero);
+  padding: 0.9rem 1.1rem;
+  margin: 1.6rem auto;
+}
+.finding .tag {
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hero);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+/* Tablas (las tablas de ablation son el corazón de los informes) */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  margin: 1.6rem 0;
+  font-variant-numeric: tabular-nums;
+}
+caption {
+  caption-side: bottom;
+  text-align: left;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  padding-top: 0.6rem;
+  line-height: 1.5;
+}
+thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--ink);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+}
+tbody td { border-bottom: 1px solid var(--rule); padding: 0.45rem 0.7rem; }
+tbody tr:hover { background: var(--accent-tint); }
+td.num, th.num { text-align: right; }
+td .best { color: var(--hero); font-weight: 700; }
+tr.winner td { background: var(--hero-tint); }
+
+/* Figuras */
+figure { margin: 2rem auto; }
+figure img { width: 100%; height: auto; border: 1px solid var(--rule); }
+figcaption {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  line-height: 1.5;
+  padding-top: 0.55rem;
+}
+figcaption b { color: var(--ink-soft); }
+
+/* Flujogramas (Mermaid): contenedor con el mismo tratamiento que una figura */
+.flow {
+  margin: 2rem auto;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 1rem 0.6rem 0.4rem;
+  text-align: center;
+}
+.flow + figcaption, .flow figcaption { text-align: left; padding: 0.55rem 0.6rem; }
+.flow .mermaid { font-family: var(--sans); }
+
+/* Código */
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  background: var(--paper-alt);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0.08em 0.35em;
+}
+pre {
+  background: var(--paper-alt);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 0.9rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+pre code { background: none; border: none; padding: 0; }
+
+/* Pie */
+footer {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  margin-top: 4rem;
+  padding: 1.4rem 1.25rem 2.5rem;
+  max-width: none;
+  text-align: center;
+}
+
+/* Swatches (solo guía de estilos) */
+.swatches { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1.6rem 0; font-family: var(--sans); }
+.swatch { flex: 1 1 7.5rem; }
+.swatch .chip { height: 5.2rem; border: 1px solid var(--rule); }
+.swatch .name { font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; }
+.swatch .hex  { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint); }
+.swatch .role { font-size: 0.72rem; color: var(--ink-soft); line-height: 1.4; }

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guía de estilos — Deep PTA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<article>
+
+<div class="masthead full">
+  <span><a href="index.html">Deep PTA</a></span>
+  <span>Guía de estilos editoriales</span>
+</div>
+
+<h1 class="title">Guía de estilos para los informes de resultados</h1>
+<p class="lede">Estilo editorial tipo <em>Distill</em>: columna de lectura estrecha,
+serifa para la prosa, sans para datos y cromo, blanco generoso y color con
+disciplina — el color marca significado, no decora.</p>
+
+<div class="byline full">
+  <span><b>Proyecto</b>Deep PTA — interpretación de pruebas de presión</span>
+  <span><b>Paleta</b>Distill clásico (monocromo + azul + naranja)</span>
+  <span><b>Hoja de estilos</b><code>docs/assets/style.css</code></span>
+  <span><b>Actualizada</b>2026-06-10</span>
+</div>
+
+<h2>Paleta y roles</h2>
+<p>Casi monocromo editorial con dos acentos de significado fijo. La regla de oro:
+<strong>el naranja es caro</strong> — se reserva para el dato que el lector debe
+recordar (la métrica héroe, el mejor valor de una tabla, el hallazgo). Si todo es
+naranja, nada lo es.</p>
+
+<div class="swatches">
+  <div class="swatch">
+    <div class="chip" style="background:#1A1A1A"></div>
+    <div class="name">Tinta</div><div class="hex">#1A1A1A</div>
+    <div class="role">Prosa y titulares.</div>
+  </div>
+  <div class="swatch">
+    <div class="chip" style="background:#6E6E6E"></div>
+    <div class="name">Gris medio</div><div class="hex">#6E6E6E</div>
+    <div class="role">Texto secundario, leyendas, metadatos.</div>
+  </div>
+  <div class="swatch">
+    <div class="chip" style="background:#E8E8E8"></div>
+    <div class="name">Regla</div><div class="hex">#E8E8E8</div>
+    <div class="role">Líneas finas, bordes, cromo silencioso.</div>
+  </div>
+  <div class="swatch">
+    <div class="chip" style="background:#2962FF"></div>
+    <div class="name">Azul acento</div><div class="hex">#2962FF</div>
+    <div class="role">Enlaces, marca, reglas de sección, series de datos.</div>
+  </div>
+  <div class="swatch">
+    <div class="chip" style="background:#BF5700"></div>
+    <div class="name">Naranja</div><div class="hex">#BF5700</div>
+    <div class="role">Métrica héroe, mejor valor, hallazgos. Con moderación.</div>
+  </div>
+</div>
+
+<h2>Tipografía</h2>
+<p>La prosa va en <strong>Source Serif 4</strong> (fallback Georgia) a 17px con
+interlínea 1.65 sobre una medida de ~70 caracteres. Los títulos de sección, tablas,
+leyendas y todo lo que sea "interfaz" van en <strong>Source Sans 3</strong>. El código
+y los números de archivo en <strong>JetBrains Mono</strong>. Los números en tablas usan
+<code>tabular-nums</code> para que las columnas alineen.</p>
+
+<h3>Un sub-encabezado se ve así</h3>
+<p>Y un párrafo con un <a href="#">enlace azul</a>, un
+<code>identificador_de_codigo</code> y un <strong>énfasis en negrita</strong>. Las
+fórmulas cortas van inline: la separación vale log₁₀(2) ≈ 0.301 en flujo lineal.</p>
+
+<h2>Componentes</h2>
+
+<h3>Métricas clave</h3>
+<p>El bloque de apertura de todo informe: 3-5 números, el héroe en naranja.</p>
+
+<div class="metrics">
+  <div class="metric hero">
+    <div class="value">0.639</div>
+    <div class="label">bal-acc yacimiento</div>
+  </div>
+  <div class="metric">
+    <div class="value">0.762</div>
+    <div class="label">bal-acc frontera</div>
+  </div>
+  <div class="metric">
+    <div class="value">0.322</div>
+    <div class="label">MAE parámetros</div>
+  </div>
+  <div class="metric">
+    <div class="value">6</div>
+    <div class="label">arquitecturas evaluadas</div>
+  </div>
+</div>
+
+<h3>Bloque de hallazgo</h3>
+<div class="finding">
+  <span class="tag">Hallazgo</span>
+  Una sola feature física (la separación Δp−Δp′) movió la métrica más que pasar de
+  2M a 5M curvas de entrenamiento: restaurar señal destruida &gt; escalar datos.
+</div>
+
+<h3>Nota al margen</h3>
+<div class="aside">En pantallas anchas esta nota flota en el margen derecho, como
+las sidenotes de Distill; en móvil cae al flujo del texto.</div>
+<p>El cuerpo del argumento sigue limpio mientras el contexto secundario (definiciones,
+salvedades metodológicas, enlaces al código) vive en notas al margen que no
+interrumpen la lectura.</p>
+
+<h3>Flujogramas</h3>
+<p>Todo workflow del código se explica con un flujograma <strong>Mermaid</strong>
+(render en el navegador, funciona en GitHub Pages). Nodos blancos con borde gris,
+flechas grises, y el nodo o arista que importa en azul; resultados/decisiones clave
+en naranja. Demo con el pipeline real del proyecto:</p>
+
+<div class="flow wide">
+<pre class="mermaid">
+flowchart LR
+  A["Motor analítico<br/><small>Laplace + Stehfest<br/>engine/</small>"]
+  B["Capa de realismo<br/><small>ruido, deriva, truncado<br/>data/realism.py</small>"]
+  C["Derivada de Bourdet<br/><small>ventana L variable<br/>data/bourdet.py</small>"]
+  D["Representación 5 canales<br/><small>p, p', t, sep, slope<br/>data/representation.py</small>"]
+  E["Banco de arquitecturas<br/><small>6 modelos, condiciones idénticas<br/>models/</small>"]
+  F["Métricas balanceadas<br/><small>in-dist + extrapolación<br/>train/train_cnn.py</small>"]
+  A --> B --> C --> D --> E --> F
+  style D stroke:#2962FF,stroke-width:2.5px
+  style F stroke:#BF5700,stroke-width:2.5px
+</pre>
+</div>
+<figcaption style="max-width:64rem;margin:-1.4rem auto 2rem;padding:0 1.25rem;">
+<b>Figura demo (flujograma).</b> El pipeline de datos de Deep PTA: el nodo azul marca
+la contribución del ciclo (los canales físicos); el naranja, el entregable. Los
+flujogramas anchos usan la clase <code>wide</code>.</figcaption>
+
+<h3>Tabla comparativa</h3>
+<p>Las tablas de ablation son el corazón de los informes: encabezado sans en
+mayúsculas con regla de tinta, filas con reglas finas, hover azul tenue, la fila
+ganadora con fondo naranja tenue y el mejor valor por columna en naranja.</p>
+
+<table>
+  <thead>
+    <tr><th>Arquitectura</th><th class="num">Params</th><th class="num">Bal-acc yac</th>
+        <th class="num">MAE</th><th class="num">Extrap</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td>PatchTST-grande</td><td class="num">6.35 M</td>
+        <td class="num"><span class="best">0.639</span></td>
+        <td class="num"><span class="best">0.322</span></td><td class="num">0.526</td></tr>
+    <tr><td>TCN</td><td class="num">0.27 M</td><td class="num">0.634</td>
+        <td class="num">0.378</td><td class="num">0.578</td></tr>
+    <tr><td>ResNet-1D</td><td class="num">0.24 M</td><td class="num">0.610</td>
+        <td class="num">0.428</td><td class="num"><span class="best">0.582</span></td></tr>
+    <tr><td>MoE</td><td class="num">0.12 M</td><td class="num">0.563</td>
+        <td class="num">0.544</td><td class="num">0.470</td></tr>
+  </tbody>
+  <caption><b>Demo de tabla</b> — extracto del banco de arquitecturas v3 (2 semillas,
+  condiciones idénticas). El mejor valor de cada columna va en naranja; la fila
+  ganadora global lleva fondo tenue.</caption>
+</table>
+
+<h3>Figuras</h3>
+<figure>
+  <img src="assets/bench_recall_by_class.png" alt="Recall por clase y arquitectura"
+       onerror="this.parentElement.style.display='none'">
+  <figcaption><b>Figura demo.</b> Las figuras llevan borde fino y leyenda sans gris
+  con la primera frase en negrita. Para tablas o figuras anchas, usar la clase
+  <code>wide</code> que rompe la medida de lectura.</figcaption>
+</figure>
+
+<h3>Código</h3>
+<pre><code>.venv/bin/python debug/dbg_train_ablation.py \
+    --name bench_tcn_s0 --arch tcn --channels sep,slope</code></pre>
+
+<h2>Reglas de redacción</h2>
+<p>Heredadas de la disciplina de métricas del proyecto:</p>
+<p>① Siempre <strong>balanced accuracy</strong>, nunca accuracy cruda. ② In-distribution
+y extrapolación se reportan <strong>siempre juntas</strong>. ③ Los resultados negativos
+se publican (el MoE último también es hallazgo). ④ Cada número de cabecera enlaza a su
+fila JSON en <code>outputs/ablation/</code>. ⑤ Todo workflow del código lleva su
+flujograma Mermaid. ⑥ Prosa en español, términos técnicos en inglés — la misma
+convención que la bitácora.</p>
+
+<footer class="full">
+  Deep PTA · guía de estilos editoriales · estilo tipo Distill
+</footer>
+
+</article>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "base",
+    themeVariables: {
+      fontFamily: "Source Sans 3, Helvetica, Arial, sans-serif",
+      fontSize: "14px",
+      primaryColor: "#ffffff",
+      primaryTextColor: "#1a1a1a",
+      primaryBorderColor: "#6e6e6e",
+      lineColor: "#6e6e6e",
+      tertiaryColor: "#f7f7f7"
+    }
+  });
+</script>
+</body>
+</html>

@@ -109,7 +109,8 @@ def save_attention_figure(model: PatchTST1D, x: Tensor, path: str) -> None:
     attn = maps[-1][0].mean(0).cpu().numpy()  # (n_patches, n_patches)
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(5, 4))
-    im = ax.imshow(attn, cmap="viridis")
+    # House sequential cmap per the style guide (docs/guia_estilos.html).
+    im = ax.imshow(attn, cmap="Blues")
     ax.set_xlabel("key patch")
     ax.set_ylabel("query patch")
     ax.set_title("PatchTST attention (last block, head-mean)")

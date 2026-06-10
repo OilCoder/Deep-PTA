@@ -361,6 +361,107 @@ figcaption b { color: var(--ink-soft); }
 .flow + figcaption, .flow figcaption { text-align: left; padding: 0.55rem 0.6rem; }
 .flow .mermaid { font-family: var(--sans); }
 
+/* Tabla de contenido: bloque tras el byline; en pantallas muy anchas,
+   columna fija a la izquierda con scroll-spy (clase .active vía JS) */
+.toc {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  background: var(--paper-alt);
+  border: 1px solid var(--rule);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 2.2rem;
+}
+.toc .toc-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
+  margin-bottom: 0.5rem;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; }
+.toc li { margin: 0.3rem 0; line-height: 1.35; }
+.toc li.lvl-3 { padding-left: 1rem; font-size: 0.78rem; }
+.toc a { color: var(--ink-soft); text-decoration: none; border-left: 2px solid transparent; padding-left: 0.5rem; display: inline-block; }
+.toc a:hover { color: var(--accent); }
+.toc a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+@media (min-width: 90rem) {
+  .toc {
+    position: fixed;
+    top: 6rem;
+    left: max(1rem, calc(50% - var(--measure) / 2 - 19rem));
+    width: 15rem;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--paper);
+    border: none;
+    border-left: 1px solid var(--rule);
+    margin: 0;
+  }
+}
+
+/* Carrusel de imágenes (scroll-snap; sin librerías; degrada a scroll lateral) */
+.carousel { position: relative; margin: 2rem auto; }
+.carousel-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  gap: 0.8rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 0.8rem;
+  scrollbar-width: thin;
+}
+.carousel-track > figure {
+  flex: 0 0 100%;
+  margin: 0;
+  scroll-snap-align: center;
+}
+.carousel-track > figure img { border: none; }
+.carousel-track > figure figcaption { padding: 0.45rem 0.2rem 0; }
+.carousel-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-family: var(--sans);
+}
+.carousel-nav button {
+  background: var(--paper-alt);
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  border-radius: 3px;
+  padding: 0.1rem 0.65rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.carousel-nav button:hover { border-color: var(--accent); color: var(--accent); }
+.carousel-nav .dots { display: flex; gap: 0.4rem; margin: 0 0.4rem; }
+.carousel-nav .dot {
+  width: 0.5rem; height: 0.5rem; border-radius: 50%;
+  background: var(--rule); cursor: pointer;
+}
+.carousel-nav .dot.active { background: var(--accent); }
+
+/* Ecuaciones (KaTeX): bloque centrado con número a la derecha */
+.equation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.6rem auto;
+  font-size: 1.05rem;
+  overflow-x: auto;
+}
+.equation .eq-no {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  margin-left: auto;
+}
+
 /* Código */
 code {
   font-family: var(--mono);

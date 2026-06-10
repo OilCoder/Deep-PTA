@@ -4,6 +4,9 @@
 
 axes.prop_cycle: cycler('color', ['2962FF', 'BF5700', '1F8A70', '7B3FB8', 'C2185B', '9A7B00', '00838F', '6E6E6E'])
 
+# Heatmaps (matrices de confusión, atención, enrutamiento): secuencial mono-matiz
+image.cmap: Blues
+
 figure.facecolor: white
 figure.dpi: 120
 savefig.bbox: tight

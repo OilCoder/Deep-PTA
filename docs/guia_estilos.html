@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 </head>
 <body>
 <article>
@@ -29,6 +30,17 @@ disciplina — el color marca significado, no decora.</p>
   <span><b>Hoja de estilos</b><code>docs/assets/style.css</code></span>
   <span><b>Actualizada</b>2026-06-10</span>
 </div>
+
+<nav class="toc" id="toc">
+  <div class="toc-title">Contenido</div>
+  <ol></ol>
+</nav>
+
+<h2>Tabla de contenido</h2>
+<p>Todo informe lleva su TOC autogenerado de los <code>h2/h3</code> (el bloque de
+arriba se construye con ~20 líneas de JS, sin librerías). En pantallas muy anchas
+flota como columna izquierda fija con <em>scroll-spy</em>: la sección visible se
+marca en azul; en pantallas normales es un bloque tras el byline.</p>
 
 <h2>Paleta y roles</h2>
 <p>Casi monocromo editorial con dos acentos de significado fijo. La regla de oro:
@@ -151,11 +163,87 @@ mono-matiz azul.</p>
 gris apagado (<code>--data-muted</code>), el dato en naranja. El lector ve la historia
 sin descifrar una leyenda de 17 colores.</figcaption>
 
+<h3>Heatmaps: un solo secuencial</h3>
+<p>Matrices de confusión, mapas de atención y enrutamiento del MoE usan SIEMPRE el
+mismo secuencial mono-matiz <strong>papel→azul</strong> (<code>Blues</code>, fijado en
+el <code>.mplstyle</code> como <code>image.cmap</code>). Nada de viridis/jet: un solo
+matiz hace comparables las intensidades entre figuras. La celda que se discute en el
+texto se marca con borde naranja (highlight&nbsp;+&nbsp;context aplicado a heatmaps).</p>
+
+<h3>Scatter de paridad e incertidumbre</h3>
+<p>Para predicho-vs-real por parámetro: identidad en gris discontinuo, puntos azules
+con <code>alpha 0.25</code>, una faceta por parámetro, y la <strong>banda ±2σ</strong>
+del modelo (incertidumbre heterocedástica) como sombreado azul al 15%. Para curvas de
+entrenamiento con varias semillas: línea = media, <strong>sombreado min-max entre
+semillas</strong> del mismo color al 15% — nunca una línea por semilla.</p>
+
 <h3>Figuras matplotlib on-brand</h3>
 <p>Las figuras de los scripts usan <code>docs/assets/deep_pta.mplstyle</code>, que fija
-el mismo ciclo de 8 colores, la sans y la rejilla fina:</p>
+el mismo ciclo de 8 colores, el secuencial de heatmaps, la sans y la rejilla fina:</p>
 <pre><code>import matplotlib.pyplot as plt
 plt.style.use("docs/assets/deep_pta.mplstyle")</code></pre>
+
+<h2>La figura insignia: curva log-log</h2>
+<p>La gráfica del dominio — Δp y derivada de Bourdet en log-log — tiene convención
+fija: <strong>Δp en gris tinta</strong> (contexto), <strong>Δp′ en azul acento</strong>
+(la derivada es la protagonista del diagnóstico), datos como puntos y modelo como
+línea, rejilla de décadas, y las <strong>pendientes de régimen anotadas en gris
+discontinuo</strong> (la meseta radial 0.5 puede ir en naranja si es el punto del
+argumento). Generada con el motor real:</p>
+
+<figure>
+  <img src="assets/style_loglog_demo.png" alt="Convención de curva log-log"
+       onerror="this.parentElement.style.display='none'">
+  <figcaption><b>Convención log-log.</b> Fractura de conductividad infinita con
+  storage (C_D=100, motor analítico certificado): pendiente unitaria del storage,
+  media pendiente del flujo lineal y meseta radial 0.5 anotadas.
+  Fuente: <code>debug/dbg_make_style_figures.py</code>.</figcaption>
+</figure>
+
+<h2>Carrusel de imágenes</h2>
+<p>Cuando hay varias figuras hermanas (los 4 mapas de atención por clase, las
+matrices de confusión de cada arquitectura), van en un <strong>carrusel</strong> con
+scroll-snap — sin librerías, degrada a scroll lateral con el dedo/trackpad:</p>
+
+<div class="carousel" data-carousel>
+  <div class="carousel-track">
+    <figure>
+      <img src="assets/bench_attention_homogeneous.png" alt="Atención — homogéneo">
+      <figcaption><b>1 · Homogéneo.</b> Atención del PatchTST (último bloque).</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_attention_inf_fracture.png" alt="Atención — fractura infinita">
+      <figcaption><b>2 · Fractura inf-conductiva.</b> Atención del PatchTST.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_attention_fin_fracture.png" alt="Atención — fractura finita">
+      <figcaption><b>3 · Fractura finita.</b> Atención del PatchTST.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_moe_routing.png" alt="Enrutamiento del MoE">
+      <figcaption><b>4 · Enrutamiento MoE</b> por clase física (secuencial azul).</figcaption>
+    </figure>
+  </div>
+  <div class="carousel-nav">
+    <button data-prev aria-label="Anterior">‹</button>
+    <span class="dots"></span>
+    <button data-next aria-label="Siguiente">›</button>
+  </div>
+</div>
+
+<h2>Ecuaciones (KaTeX)</h2>
+<p>La matemática se renderiza con <strong>KaTeX</strong> (CDN + auto-render; funciona
+en GitHub Pages). Inline con <code>\( ... \)</code> y en bloque con
+<code>$$ ... $$</code> dentro de <code>.equation</code>, con número a la derecha:</p>
+
+<div class="equation">
+  <span>$$ \Delta p' \;=\; \frac{d\,\Delta p}{d \ln t} \;=\; n \cdot \Delta p
+  \quad\Rightarrow\quad \log_{10}\Delta p - \log_{10}\Delta p' = -\log_{10} n $$</span>
+  <span class="eq-no">(1)</span>
+</div>
+
+<p>La separación inline también funciona: en flujo lineal \( n = \tfrac12 \) y la
+separación vale \( \log_{10} 2 \approx 0.301 \).</p>
 
 <h2>Tipografía</h2>
 <p>La prosa va en <strong>Source Serif 4</strong> (fallback Georgia) a 17px con
@@ -286,7 +374,69 @@ convención que la bitácora.</p>
 
 </article>
 
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '\\(', right: '\\)', display: false}
+  ]});"></script>
 <script>
+  // TOC autogenerado de h2/h3 + scroll-spy
+  (function () {
+    const toc = document.querySelector("#toc ol");
+    if (!toc) return;
+    const heads = [...document.querySelectorAll("article h2, article h3")];
+    const links = new Map();
+    heads.forEach((h, i) => {
+      if (!h.id) h.id = "s" + i + "-" + h.textContent.toLowerCase()
+        .normalize("NFD").replace(/[^a-z0-9]+/g, "-").slice(0, 40);
+      const li = document.createElement("li");
+      li.className = "lvl-" + h.tagName[1];
+      const a = document.createElement("a");
+      a.href = "#" + h.id;
+      a.textContent = h.textContent;
+      li.appendChild(a);
+      toc.appendChild(li);
+      links.set(h.id, a);
+    });
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          links.forEach((a) => a.classList.remove("active"));
+          links.get(e.target.id)?.classList.add("active");
+        }
+      });
+    }, { rootMargin: "0px 0px -75% 0px" });
+    heads.forEach((h) => spy.observe(h));
+  })();
+
+  // Carrusel: scroll-snap + dots + prev/next
+  (function () {
+    document.querySelectorAll("[data-carousel]").forEach((root) => {
+      const track = root.querySelector(".carousel-track");
+      const slides = [...track.children];
+      const dotsBox = root.querySelector(".dots");
+      const dots = slides.map((_, i) => {
+        const d = document.createElement("span");
+        d.className = "dot" + (i === 0 ? " active" : "");
+        d.addEventListener("click", () => go(i));
+        dotsBox.appendChild(d);
+        return d;
+      });
+      let idx = 0;
+      function go(i) {
+        idx = Math.max(0, Math.min(slides.length - 1, i));
+        track.scrollTo({ left: slides[idx].offsetLeft - track.offsetLeft, behavior: "smooth" });
+      }
+      root.querySelector("[data-prev]").addEventListener("click", () => go(idx - 1));
+      root.querySelector("[data-next]").addEventListener("click", () => go(idx + 1));
+      track.addEventListener("scroll", () => {
+        const i = Math.round(track.scrollLeft / track.clientWidth);
+        if (i !== idx) { idx = i; dots.forEach((d, j) => d.classList.toggle("active", j === i)); }
+      }, { passive: true });
+    });
+  })();
+
   // Toggle de tema: AUTO -> DARK -> LIGHT -> AUTO (persistido en localStorage)
   (function () {
     const root = document.documentElement;

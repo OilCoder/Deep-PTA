@@ -21,6 +21,18 @@
   --hero:        #bf5700; /* métrica héroe, mejor valor, hallazgos — escaso */
   --hero-tint:   #fbf2ea; /* fondo del bloque de hallazgo, fila ganadora */
 
+  /* Ciclo categórico para series de datos (gráficas con varias curvas).
+     Orden fijo: las dos primeras son los acentos editoriales; ≤8 series. */
+  --data-1: #2962ff;  /* azul (acento) */
+  --data-2: #bf5700;  /* naranja (héroe) */
+  --data-3: #1f8a70;  /* verde azulado */
+  --data-4: #7b3fb8;  /* violeta */
+  --data-5: #c2185b;  /* magenta */
+  --data-6: #9a7b00;  /* ocre */
+  --data-7: #00838f;  /* cian profundo */
+  --data-8: #6e6e6e;  /* gris: la categoría "resto/otros" */
+  --data-muted: #c9ced6; /* contexto apagado para highlight+context */
+
   /* Tipografía */
   --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
   --sans:  "Source Sans 3", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -28,7 +40,85 @@
 
   --measure: 44rem;       /* ancho de lectura ~704px */
   --measure-wide: 64rem;  /* figuras y tablas anchas */
+
+  color-scheme: light dark;
 }
+
+/* ---------- modo oscuro ----------
+   Automático por preferencia del sistema; forzable con
+   <html data-theme="dark"> o data-theme="light" (toggle del masthead). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink:        #e8e6e3;
+    --ink-soft:   #b8b5b0;
+    --ink-faint:  #8d8a85;
+    --paper:      #14161a;
+    --paper-alt:  #1d2026;
+    --rule:       #2c3039;
+
+    --accent:      #7da2ff;
+    --accent-dark: #a7c0ff;
+    --accent-tint: #1b2334;
+
+    --hero:        #ff9248;
+    --hero-tint:   #2a2018;
+
+    --data-1: #7da2ff;
+    --data-2: #ff9248;
+    --data-3: #45c4a4;
+    --data-4: #b388ff;
+    --data-5: #ff6f9d;
+    --data-6: #d9b830;
+    --data-7: #4dd0e1;
+    --data-8: #9a9a9a;
+    --data-muted: #3a3f48;
+  }
+}
+:root[data-theme="dark"] {
+  --ink:        #e8e6e3;
+  --ink-soft:   #b8b5b0;
+  --ink-faint:  #8d8a85;
+  --paper:      #14161a;
+  --paper-alt:  #1d2026;
+  --rule:       #2c3039;
+
+  --accent:      #7da2ff;
+  --accent-dark: #a7c0ff;
+  --accent-tint: #1b2334;
+
+  --hero:        #ff9248;
+  --hero-tint:   #2a2018;
+
+  --data-1: #7da2ff;
+  --data-2: #ff9248;
+  --data-3: #45c4a4;
+  --data-4: #b388ff;
+  --data-5: #ff6f9d;
+  --data-6: #d9b830;
+  --data-7: #4dd0e1;
+  --data-8: #9a9a9a;
+  --data-muted: #3a3f48;
+}
+
+/* Las figuras raster (matplotlib, fondo blanco) se atenúan en oscuro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) figure img { filter: brightness(0.88) contrast(1.02); }
+}
+:root[data-theme="dark"] figure img { filter: brightness(0.88) contrast(1.02); }
+
+/* Toggle de tema (masthead) */
+.theme-toggle {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  border-radius: 3px;
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- base ---------- */
 * { box-sizing: border-box; }

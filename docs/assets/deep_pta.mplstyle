@@ -1,0 +1,36 @@
+# Deep PTA — estilo matplotlib para figuras de informes (modo claro)
+# Uso: plt.style.use("docs/assets/deep_pta.mplstyle")
+# Ciclo de series = paleta categórica de la guía de estilos (docs/guia_estilos.html)
+
+axes.prop_cycle: cycler('color', ['2962FF', 'BF5700', '1F8A70', '7B3FB8', 'C2185B', '9A7B00', '00838F', '6E6E6E'])
+
+figure.facecolor: white
+figure.dpi: 120
+savefig.bbox: tight
+
+axes.facecolor: white
+axes.edgecolor: 6E6E6E
+axes.linewidth: 0.8
+axes.grid: True
+axes.titlesize: 11
+axes.titleweight: bold
+axes.labelsize: 9
+axes.labelcolor: 4D4D4D
+axes.spines.top: False
+axes.spines.right: False
+
+grid.color: E8E8E8
+grid.linewidth: 0.6
+
+xtick.labelsize: 8
+ytick.labelsize: 8
+xtick.color: 6E6E6E
+ytick.color: 6E6E6E
+
+legend.fontsize: 8
+legend.frameon: False
+
+font.family: sans-serif
+font.sans-serif: Source Sans 3, DejaVu Sans, Helvetica, Arial
+
+lines.linewidth: 1.6

@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitácora de decisiones — Deep PTA</title>
+<meta name="description" content="Las decisiones de diseño del proyecto Deep PTA, con sus porqués y sus alternativas descartadas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<article>
+
+<div class="masthead full">
+  <nav>
+    <a href="index.html" data-lang="es">Informe</a>
+    <a href="index.html" data-lang="en" style="display:none">Report</a>
+    <a href="bitacora.html" class="current" data-lang="es">Bitácora</a>
+    <a href="bitacora.html" class="current" data-lang="en" style="display:none">Logbook</a>
+  </nav>
+  <span style="display:flex;gap:0.6rem;align-items:center;">
+    <span class="lang-toggle">
+      <button data-set-lang="es">ES</button><button data-set-lang="en">EN</button>
+    </span>
+    <button class="theme-toggle" id="theme-toggle" title="Tema">AUTO</button>
+  </span>
+</div>
+
+<!-- ======================= ESPAÑOL ======================= -->
+<div data-lang="es">
+
+<h1 class="title">Bitácora de decisiones</h1>
+<p class="lede">No es una transcripción del desarrollo: son las decisiones de diseño
+que dieron forma al proyecto, en orden, con su porqué y con lo que descarté. Si el
+<a href="index.html">informe</a> cuenta qué encontré, esta página cuenta cómo llegué
+— incluidos los callejones sin salida.</p>
+
+<div class="byline full">
+  <span><b>Proyecto</b>Deep PTA</span>
+  <span><b>Periodo</b>junio 2026</span>
+  <span><b>Formato</b>Decisión · Por qué · Alternativa descartada</span>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-04 · Diseño</div>
+  <h3>Cerrar el alcance antes de escribir código</h3>
+  <p class="dec"><b>Decisión:</b> taxonomía factorizada en dos cabezas (4 modelos de
+  yacimiento × 4 fronteras) con almacenamiento y daño siempre presentes; monofásico,
+  representación 1D, sin simulador comercial.
+  <b>Por qué:</b> una taxonomía cerrada hace los labels perfectos por construcción y
+  el problema medible; cada ampliación de alcance multiplica el espacio de validación.
+  <b>Alternativa descartada:</b> clasificar las 16 combinaciones como una sola clase —
+  pierde la estructura del problema y necesita 16× más datos por celda.</p>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-05 · Motor</div>
+  <h3>Certificar el motor antes de entrenar nada</h3>
+  <p class="dec"><b>Decisión:</b> el generador analítico (Laplace + Stehfest + Bessel)
+  debía reproducir las type curves publicadas de Bourdet/Gringarten y coincidir con
+  AnaFlow antes del primer entrenamiento.
+  <b>Por qué:</b> si el generador está mal, todo lo de arriba aprende física
+  equivocada con etiquetas "perfectas" — el error más caro posible.
+  <b>Alternativa descartada:</b> validar "después, si algo se ve raro" — lo raro
+  nunca se ve cuando train y test salen del mismo generador sesgado.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-07 · Métricas</div>
+  <h3>Matar el 0.84 que era mentira</h3>
+  <p class="dec"><b>Decisión:</b> pasar toda la medición a balanced accuracy sobre un
+  test estratificado (300 por clase), con recall por clase visible.
+  <b>Por qué:</b> el 0.84 de frontera era desbalance: el 70% del test era "infinito"
+  y el modelo acertaba la mayoría. El número honesto era 0.61. Preferí perder 0.23 de
+  marketing y ganar un marcador en el que puedo confiar.
+  <b>Alternativa descartada:</b> reponderar la loss y seguir midiendo accuracy cruda —
+  maquilla el síntoma sin arreglar el marcador.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-07 · Datos</div>
+  <h3>El split híbrido de almacenamiento</h3>
+  <p class="dec"><b>Decisión:</b> entrenar con el rango completo de C_D y reportar dos
+  números: in-distribution (holdout por hash de muestra, sin fuga) y un test de
+  extrapolación con la banda alta de storage jamás entrenada.
+  <b>Por qué:</b> el split anterior evaluaba solo extrapolando — un examen brutal que
+  confundía "el modelo es malo" con "el examen es imposible". Dos números separan las
+  dos preguntas.
+  <b>Alternativa descartada:</b> un solo test i.i.d. — esconde la fragilidad fuera de
+  distribución, que es justo lo que importa en campo.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-08 · Escala</div>
+  <h3>Portar el motor a GPU para hacer barato el experimento de datos</h3>
+  <p class="dec"><b>Decisión:</b> port PyTorch batched del motor (Stehfest + Bessel en
+  GPU), validado contra el motor CPU certificado a 4×10⁻⁷, solo para generación.
+  <b>Por qué:</b> la hipótesis "faltan datos" merecía probarse a 2M y 5M de curvas, y
+  a velocidad CPU eso eran días. En GPU: 5M en 14 minutos, misma distribución.
+  <b>Alternativa descartada:</b> tocar el motor certificado para acelerarlo — el de
+  CPU quedó intacto como referencia; el de GPU es un clon verificado.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-08 · Escala</div>
+  <h3>Aceptar que los datos se aplanaron</h3>
+  <p class="dec"><b>Decisión:</b> registrar el aplanamiento (25k→2M: +0.10; 2M→5M:
+  +0.02; capacidad 60×: +0.00) como resultado, y buscar el cuello en otra parte.
+  <b>Por qué:</b> la curva de escala es un dato, no un fracaso. Decía con claridad:
+  el problema no es cuántas curvas ve el modelo sino qué información lleva cada una.
+  <b>Alternativa descartada:</b> 20M de curvas — extrapolando la curva de escala,
+  habría compradod ~+0.01 por 4× el costo.</p>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-09 · Representación</div>
+  <h3>El hallazgo: la normalización borraba la señal del experto</h3>
+  <p class="dec"><b>Decisión:</b> añadir dos canales físicos a la entrada — la
+  separación Δp−Δp′ con normalización fija (el nivel absoluto ES la señal) y la
+  pendiente log-log local — validados primero con un prototipo barato a dos semillas.
+  <b>Por qué:</b> estandarizar cada canal por curva destruía la separación que vale
+  log₁₀(2) en flujo lineal: el discriminador que el modelo más necesitaba no estaba
+  en su entrada. El prototipo dio +0.025 con 300 mil curvas — más que el salto de
+  2M a 5M.
+  <b>Alternativa descartada:</b> esperar que la red "aprendiera" la separación de los
+  canales crudos — no puede: la información ya no estaba en la entrada (la
+  desigualdad de procesamiento de datos no es negociable).</p>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-09 · Reenfoque</div>
+  <h3>Volver a la pregunta original del proyecto</h3>
+  <p class="dec"><b>Decisión:</b> degradar el ensemble (que era la cabecera del ciclo
+  anterior) a nota al pie, y reorganizar todo alrededor del banco comparativo: ¿qué
+  arquitectura interpreta mejor, y por qué?
+  <b>Por qué:</b> el proyecto nació para comparar familias de arquitecturas en un
+  problema físico real con datos perfectamente etiquetados — perseguir el mejor número
+  con un ensemble contaba otra historia, menos útil y menos honesta.
+  <b>Alternativa descartada:</b> seguir optimizando el número de cabecera (cabezas
+  auxiliares, calibración) — quedó documentado como fase posible, no ejecutada.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-10 · Banco</div>
+  <h3>Condiciones idénticas o no cuenta</h3>
+  <p class="dec"><b>Decisión:</b> 6 arquitecturas × 2 semillas × mismo presupuesto
+  (40k pasos), mismos datos congelados, misma selección por validación, mismo test —
+  y el MoE diseñado con gating denso (soft) en vez de top-k sparse.
+  <b>Por qué:</b> sin presupuesto idéntico, una comparación de arquitecturas es una
+  comparación de tiempos de entrenamiento. El gating denso evita el colapso de
+  expertos sin losses auxiliares — el sparse es una optimización para modelos
+  gigantes que aquí solo añade fragilidad.
+  <b>Alternativa descartada:</b> HPO por arquitectura — más justo en teoría,
+  incomparable en la práctica con este presupuesto; queda anotado como limitación.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-10 · Embarque</div>
+  <h3>Embarcar el robusto, no el campeón</h3>
+  <p class="dec"><b>Decisión:</b> el intérprete de la app es el TCN entrenado a 5M
+  (extrapolación 0.623/0.806, MAE 0.363 fuera de distribución), no el Transformer
+  grande que gana in-distribution.
+  <b>Por qué:</b> un pozo real no firma ningún contrato de parecerse al set de
+  entrenamiento. El TCN pierde ~1 punto fuera de distribución; el Transformer grande
+  pierde 11.
+  <b>Alternativa descartada:</b> el ensemble de ambos (+0.01 in-dist) — diluye la
+  historia comparativa y duplica el costo de inferencia para una mejora marginal.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-10 · Cierre</div>
+  <h3>Publicar también lo que no funcionó</h3>
+  <p class="dec"><b>Decisión:</b> el MoE último en la tabla y su análisis de
+  enrutamiento (compuertas casi planas) van en el informe con el mismo peso que los
+  ganadores; los límites físicos (no-unicidad) tienen su propia sección.
+  <b>Por qué:</b> un benchmark que solo publica victorias no es un benchmark, es
+  publicidad. El ratio de concentración (errores 2.8–3× concentrados en los pares
+  físicamente ambiguos) es la frontera honesta entre lo que el ML puede arreglar y lo
+  que no.
+  <b>Alternativa descartada:</b> omitir el MoE "porque quedó mal" — era mi propia
+  hipótesis; enterrarla habría sido el sesgo de publicación de siempre.</p>
+</div>
+
+</div>
+
+<!-- ======================= ENGLISH ======================= -->
+<div data-lang="en" style="display:none">
+
+<h1 class="title">Decision logbook</h1>
+<p class="lede">This is not a development transcript: these are the design decisions
+that shaped the project, in order, with their why and what I discarded. If the
+<a href="index.html">report</a> tells what I found, this page tells how I got
+there — dead ends included.</p>
+
+<div class="byline full">
+  <span><b>Project</b>Deep PTA</span>
+  <span><b>Period</b>June 2026</span>
+  <span><b>Format</b>Decision · Why · Discarded alternative</span>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-04 · Design</div>
+  <h3>Close the scope before writing code</h3>
+  <p class="dec"><b>Decision:</b> a factored taxonomy with two heads (4 reservoir
+  models × 4 boundaries), storage and skin always present; single-phase, 1D
+  representation, no commercial simulator.
+  <b>Why:</b> a closed taxonomy makes labels perfect by construction and the problem
+  measurable; every scope extension multiplies the validation space.
+  <b>Discarded alternative:</b> classifying all 16 combinations as one head — it
+  loses the problem's structure and needs 16× more data per cell.</p>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-05 · Engine</div>
+  <h3>Certify the engine before training anything</h3>
+  <p class="dec"><b>Decision:</b> the analytical generator (Laplace + Stehfest +
+  Bessel) had to reproduce published Bourdet/Gringarten type curves and match AnaFlow
+  before the first training run.
+  <b>Why:</b> if the generator is wrong, everything above it learns wrong physics
+  with "perfect" labels — the most expensive possible failure.
+  <b>Discarded alternative:</b> validating "later, if something looks off" — nothing
+  ever looks off when train and test come from the same biased generator.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-07 · Metrics</div>
+  <h3>Killing the 0.84 that was a lie</h3>
+  <p class="dec"><b>Decision:</b> move all measurement to balanced accuracy on a
+  stratified test (300 per class), with per-class recall visible.
+  <b>Why:</b> the 0.84 boundary score was class imbalance: 70% of the test was
+  "infinite" and the model nailed the majority. The honest number was 0.61. I chose
+  to lose 0.23 of marketing and gain a scoreboard I can trust.
+  <b>Discarded alternative:</b> reweighting the loss while still reporting raw
+  accuracy — makeup on the symptom, the scoreboard stays broken.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-07 · Data</div>
+  <h3>The hybrid storage split</h3>
+  <p class="dec"><b>Decision:</b> train on the full C_D range and report two numbers:
+  in-distribution (leak-free per-sample-hash holdout) and an extrapolation test on
+  the never-trained high-storage band.
+  <b>Why:</b> the previous split evaluated only by extrapolating — a brutal exam that
+  confused "the model is bad" with "the exam is impossible". Two numbers separate the
+  two questions.
+  <b>Discarded alternative:</b> a single i.i.d. test — it hides out-of-distribution
+  fragility, which is exactly what matters in the field.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-08 · Scale</div>
+  <h3>Porting the engine to GPU to make the data experiment cheap</h3>
+  <p class="dec"><b>Decision:</b> a batched PyTorch port of the engine (Stehfest +
+  Bessel on GPU), validated against the certified CPU engine to 4×10⁻⁷, used only
+  for generation.
+  <b>Why:</b> the "we need more data" hypothesis deserved testing at 2M and 5M
+  curves, and at CPU speed that meant days. On GPU: 5M in 14 minutes, same
+  distribution.
+  <b>Discarded alternative:</b> touching the certified engine to speed it up — the
+  CPU engine stayed intact as the reference; the GPU one is a verified clone.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-08 · Scale</div>
+  <h3>Accepting that data flattened</h3>
+  <p class="dec"><b>Decision:</b> record the flattening (25k→2M: +0.10; 2M→5M: +0.02;
+  60× capacity: +0.00) as a result, and look for the bottleneck elsewhere.
+  <b>Why:</b> a scaling curve is data, not failure. It said clearly: the problem
+  isn't how many curves the model sees but what information each one carries.
+  <b>Discarded alternative:</b> 20M curves — extrapolating the scaling curve, that
+  would have bought ~+0.01 for 4× the cost.</p>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-09 · Representation</div>
+  <h3>The finding: normalization was erasing the expert's signal</h3>
+  <p class="dec"><b>Decision:</b> add two physics channels to the input — the Δp−Δp′
+  separation with fixed normalization (the absolute level IS the signal) and the
+  local log-log slope — validated first with a cheap two-seed prototype.
+  <b>Why:</b> per-curve standardization destroyed the separation that equals
+  log₁₀(2) in linear flow: the discriminator the model needed most wasn't in its
+  input. The prototype gave +0.025 with 300k curves — more than the 2M→5M jump.
+  <b>Discarded alternative:</b> hoping the network would "learn" the separation from
+  the raw channels — it can't: the information was no longer in the input (the data
+  processing inequality is not negotiable).</p>
+</div>
+
+<div class="entry milestone">
+  <div class="when">2026-06-09 · Refocus</div>
+  <h3>Returning to the project's original question</h3>
+  <p class="dec"><b>Decision:</b> demote the ensemble (the previous cycle's headline)
+  to a footnote, and reorganize everything around the comparative benchmark: which
+  architecture interprets best, and why?
+  <b>Why:</b> the project was born to compare architecture families on a real
+  physical problem with perfectly labeled data — chasing the best number with an
+  ensemble told a different, less useful, less honest story.
+  <b>Discarded alternative:</b> keep optimizing the headline number (auxiliary heads,
+  calibration) — documented as a possible later phase, not executed.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-10 · Benchmark</div>
+  <h3>Identical conditions or it doesn't count</h3>
+  <p class="dec"><b>Decision:</b> 6 architectures × 2 seeds × the same budget (40k
+  steps), same frozen data, same validation-based selection, same test — and the MoE
+  designed with dense (soft) gating instead of sparse top-k.
+  <b>Why:</b> without identical budgets, an architecture comparison is a comparison
+  of training times. Dense gating avoids expert collapse without auxiliary losses —
+  sparse routing is a giant-model optimization that here only adds fragility.
+  <b>Discarded alternative:</b> per-architecture HPO — fairer in theory,
+  incomparable in practice at this budget; noted as a limitation.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-10 · Shipping</div>
+  <h3>Ship the robust one, not the champion</h3>
+  <p class="dec"><b>Decision:</b> the app's interpreter is the TCN trained at 5M
+  (extrapolation 0.623/0.806, MAE 0.363 out of distribution), not the large
+  Transformer that wins in-distribution.
+  <b>Why:</b> a real well signs no contract to resemble the training set. The TCN
+  loses ~1 point out of distribution; the large Transformer loses 11.
+  <b>Discarded alternative:</b> ensembling both (+0.01 in-dist) — it dilutes the
+  comparative story and doubles inference cost for a marginal gain.</p>
+</div>
+
+<div class="entry">
+  <div class="when">2026-06-10 · Closing</div>
+  <h3>Publishing what didn't work, too</h3>
+  <p class="dec"><b>Decision:</b> the MoE sits last in the table and its routing
+  analysis (nearly flat gates) goes in the report with the same weight as the
+  winners; the physical limits (non-uniqueness) get their own section.
+  <b>Why:</b> a benchmark that only publishes wins isn't a benchmark, it's
+  advertising. The concentration ratio (errors 2.8–3× concentrated on physically
+  ambiguous pairs) is the honest frontier between what ML can fix and what it
+  can't.
+  <b>Discarded alternative:</b> omitting the MoE "because it did poorly" — it was my
+  own hypothesis; burying it would have been the usual publication bias.</p>
+</div>
+
+</div>
+
+<footer class="full">
+  <span data-lang="es">Deep PTA · bitácora de decisiones ·
+    <a href="index.html">informe</a> ·
+    <a href="https://github.com/OilCoder/Deep-PTA">código</a></span>
+  <span data-lang="en" style="display:none">Deep PTA · decision logbook ·
+    <a href="index.html">report</a> ·
+    <a href="https://github.com/OilCoder/Deep-PTA">code</a></span>
+</footer>
+
+</article>
+<script src="assets/site.js"></script>
+</body>
+</html>

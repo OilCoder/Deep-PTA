@@ -13,8 +13,12 @@
 <article>
 
 <div class="masthead full">
-  <span><a href="index.html">Deep PTA</a></span>
-  <span>Guía de estilos editoriales
+  <nav>
+    <a href="index.html">Informe</a>
+    <a href="bitacora.html">Bitácora</a>
+    <a href="guia_estilos.html" class="current">Guía de estilos</a>
+  </nav>
+  <span style="display:flex;gap:0.6rem;align-items:center;">
     <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">AUTO</button>
   </span>
 </div>
@@ -380,104 +384,6 @@ convención que la bitácora.</p>
     {left: '$$', right: '$$', display: true},
     {left: '\\(', right: '\\)', display: false}
   ]});"></script>
-<script>
-  // TOC autogenerado de h2/h3 + scroll-spy
-  (function () {
-    const toc = document.querySelector("#toc ol");
-    if (!toc) return;
-    const heads = [...document.querySelectorAll("article h2, article h3")];
-    const links = new Map();
-    heads.forEach((h, i) => {
-      if (!h.id) h.id = "s" + i + "-" + h.textContent.toLowerCase()
-        .normalize("NFD").replace(/[^a-z0-9]+/g, "-").slice(0, 40);
-      const li = document.createElement("li");
-      li.className = "lvl-" + h.tagName[1];
-      const a = document.createElement("a");
-      a.href = "#" + h.id;
-      a.textContent = h.textContent;
-      li.appendChild(a);
-      toc.appendChild(li);
-      links.set(h.id, a);
-    });
-    const spy = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          links.forEach((a) => a.classList.remove("active"));
-          links.get(e.target.id)?.classList.add("active");
-        }
-      });
-    }, { rootMargin: "0px 0px -75% 0px" });
-    heads.forEach((h) => spy.observe(h));
-  })();
-
-  // Carrusel: scroll-snap + dots + prev/next
-  (function () {
-    document.querySelectorAll("[data-carousel]").forEach((root) => {
-      const track = root.querySelector(".carousel-track");
-      const slides = [...track.children];
-      const dotsBox = root.querySelector(".dots");
-      const dots = slides.map((_, i) => {
-        const d = document.createElement("span");
-        d.className = "dot" + (i === 0 ? " active" : "");
-        d.addEventListener("click", () => go(i));
-        dotsBox.appendChild(d);
-        return d;
-      });
-      let idx = 0;
-      function go(i) {
-        idx = Math.max(0, Math.min(slides.length - 1, i));
-        track.scrollTo({ left: slides[idx].offsetLeft - track.offsetLeft, behavior: "smooth" });
-      }
-      root.querySelector("[data-prev]").addEventListener("click", () => go(idx - 1));
-      root.querySelector("[data-next]").addEventListener("click", () => go(idx + 1));
-      track.addEventListener("scroll", () => {
-        const i = Math.round(track.scrollLeft / track.clientWidth);
-        if (i !== idx) { idx = i; dots.forEach((d, j) => d.classList.toggle("active", j === i)); }
-      }, { passive: true });
-    });
-  })();
-
-  // Toggle de tema: AUTO -> DARK -> LIGHT -> AUTO (persistido en localStorage)
-  (function () {
-    const root = document.documentElement;
-    const btn = document.getElementById("theme-toggle");
-    const saved = localStorage.getItem("deep-pta-theme");
-    if (saved) { root.dataset.theme = saved; btn.textContent = saved.toUpperCase(); }
-    btn.addEventListener("click", () => {
-      const next = { "": "dark", "dark": "light", "light": "" }[root.dataset.theme || ""];
-      if (next) { root.dataset.theme = next; localStorage.setItem("deep-pta-theme", next); }
-      else { delete root.dataset.theme; localStorage.removeItem("deep-pta-theme"); }
-      btn.textContent = (next || "auto").toUpperCase();
-      location.reload(); // re-render mermaid con el tema correcto
-    });
-  })();
-</script>
-<script type="module">
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-  const forced = document.documentElement.dataset.theme;
-  const dark = forced === "dark" ||
-    (!forced && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  mermaid.initialize({
-    startOnLoad: true,
-    theme: "base",
-    themeVariables: dark ? {
-      fontFamily: "Source Sans 3, Helvetica, Arial, sans-serif",
-      fontSize: "14px",
-      primaryColor: "#1d2026",
-      primaryTextColor: "#e8e6e3",
-      primaryBorderColor: "#8d8a85",
-      lineColor: "#8d8a85",
-      tertiaryColor: "#14161a"
-    } : {
-      fontFamily: "Source Sans 3, Helvetica, Arial, sans-serif",
-      fontSize: "14px",
-      primaryColor: "#ffffff",
-      primaryTextColor: "#1a1a1a",
-      primaryBorderColor: "#6e6e6e",
-      lineColor: "#6e6e6e",
-      tertiaryColor: "#f7f7f7"
-    }
-  });
-</script>
+<script src="assets/site.js"></script>
 </body>
 </html>

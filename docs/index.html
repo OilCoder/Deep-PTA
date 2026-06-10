@@ -1,86 +1,568 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Deep PTA — neural pressure transient interpretation</title>
-  <style>
-    :root { --bg:#0d1117; --card:#161b22; --fg:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --good:#3fb950; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-           background: var(--bg); color: var(--fg); line-height: 1.6; }
-    .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px; }
-    h1 { font-size: 2.2rem; margin: 0 0 8px; }
-    h2 { font-size: 1.3rem; margin: 40px 0 12px; border-bottom: 1px solid #30363d; padding-bottom: 6px; }
-    .tag { color: var(--accent); font-weight: 600; }
-    .lead { color: var(--muted); font-size: 1.1rem; }
-    .card { background: var(--card); border: 1px solid #30363d; border-radius: 10px; padding: 18px 20px; margin: 14px 0; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #30363d; }
-    th { color: var(--muted); font-weight: 600; }
-    .good { color: var(--good); font-weight: 600; }
-    code { background:#1f2630; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
-    a { color: var(--accent); }
-    .foot { color: var(--muted); font-size: 0.9rem; margin-top: 40px; }
-    ul { padding-left: 20px; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deep PTA — ¿Qué arquitectura interpreta mejor una prueba de presión?</title>
+<meta name="description" content="Seis redes neuronales compitiendo por interpretar pruebas de presión de pozos, entrenadas con millones de curvas generadas por un motor analítico certificado.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="wrap">
-    <h1>Deep PTA</h1>
-    <p class="lead">A neural network that does the <span class="tag">senior interpreter's job</span>:
-      it reads the Δp + Bourdet-derivative curve (log-log) of a pressure transient test and
-      diagnoses the reservoir model, the boundary, and the key parameters.</p>
+<article>
 
-    <div class="card">
-      Trained 100% on synthetic data from a <strong>certified</strong> analytical engine
-      (Laplace solutions + Stehfest inversion), verified against published Bourdet/Gringarten
-      type curves and AnaFlow. No commercial simulator.
-    </div>
+<div class="masthead full">
+  <nav>
+    <a href="index.html" class="current" data-lang="es">Informe</a>
+    <a href="index.html" class="current" data-lang="en" style="display:none">Report</a>
+    <a href="bitacora.html" data-lang="es">Bitácora</a>
+    <a href="bitacora.html" data-lang="en" style="display:none">Logbook</a>
+  </nav>
+  <span style="display:flex;gap:0.6rem;align-items:center;">
+    <span class="lang-toggle">
+      <button data-set-lang="es">ES</button><button data-set-lang="en">EN</button>
+    </span>
+    <button class="theme-toggle" id="theme-toggle" title="Tema">AUTO</button>
+  </span>
+</div>
 
-    <h2>The honest result</h2>
-    <p>Headline numbers are <strong>balanced accuracy</strong> (mean per-class recall) on a
-      <strong>class-stratified</strong> test set — raw accuracy lies under class imbalance.
-      Two test sets are reported: an <strong>in-distribution</strong> holdout (headline) and a
-      held-out <strong>high-storage extrapolation</strong> set the model never trains on.</p>
-    <table>
-      <tr><th>Head</th><th>Original (misleading)</th><th>Honest baseline</th><th>In-distribution</th><th>Extrapolation</th></tr>
-      <tr><td>Reservoir (4 classes)</td><td>0.42 raw</td><td>0.513</td><td class="good">0.649</td><td>0.553</td></tr>
-      <tr><td>Boundary (4 classes)</td><td>0.84 raw</td><td>0.698</td><td class="good">0.765</td><td>0.733</td></tr>
-      <tr><td>Param MAE (log10)</td><td>—</td><td>0.69</td><td class="good">0.36</td><td>0.73</td></tr>
-    </table>
-    <p>Headline is a <strong>ResNet-1D + PatchTST ensemble</strong>. The boundary "0.84" was a
-      mirage (old test ~70% infinite-acting). The real lift came from <strong>data scale</strong>:
-      a GPU-batched engine — validated against the certified CPU engine to ~4e-7 — made training
-      on millions of curves cheap, raising reservoir balanced accuracy 0.51→0.65 and nearly
-      halving the parameter MAE. Homogeneous reservoir recall went 0.12→0.59. A 2× larger model
-      matched the small one, so <em>capacity</em> was not the bottleneck — <em>data</em> was. The
-      residual ceiling is the physical homogeneous↔infinite-fracture non-uniqueness.</p>
+<!-- ======================= ESPAÑOL ======================= -->
+<div data-lang="es">
 
-    <h2>What's inside</h2>
-    <ul>
-      <li><strong>Analytical engine</strong> — homogeneous, double porosity, infinite/finite
-        fractures; infinite / sealing-fault / constant-pressure / closed boundaries.</li>
-      <li><strong>GPU-batched engine</strong> — a PyTorch port of the analytical engine
-        validated against the certified CPU engine to ~4e-7; generates millions of curves in
-        minutes, preserving the data distribution.</li>
-      <li><strong>Synthetic generator</strong> — realistic noise, drift, truncation, domain-aware
-        validity filter; a hybrid <code>C_D</code> split (in-distribution holdout + extrapolation).</li>
-      <li><strong>Two models + ensemble</strong> — multi-task ResNet-1D and a hand-built
-        PatchTST-style Transformer over a 3-channel log-log representation, fused by an ensemble.</li>
-      <li><strong>Reproducible training</strong> — Optuna HPO on balanced accuracy, early
-        stopping, TensorBoard; one entrypoint.</li>
-      <li><strong>App + narrator</strong> — Gradio CSV→diagnosis with a fitted-curve overlay
-        and an optional Claude-based narrator.</li>
-    </ul>
+<h1 class="title">¿Qué arquitectura neuronal interpreta mejor una prueba de presión?</h1>
+<p class="lede">Entrené seis redes — de una CNN de 240 mil parámetros a un Transformer
+de 6 millones, pasando por una mezcla de expertos — con millones de curvas generadas
+por un motor analítico certificado, y las puse a competir en condiciones idénticas
+en el trabajo de un intérprete senior: leer la derivada de Bourdet y diagnosticar el
+yacimiento. Este es el resultado, incluido lo que no funcionó.</p>
 
-    <h2>Method &amp; rigor</h2>
-    <p>The accuracy story — why the metric was misleading, and a quantitative test (error
-      concentration ratio) of whether residual error is physical non-uniqueness or pipeline —
-      is documented in the project's method reports.</p>
+<div class="byline full">
+  <span><b>Autor</b>Carlos Esquivel</span>
+  <span><b>Proyecto</b>Deep PTA — código en <a href="https://github.com/OilCoder/Deep-PTA">GitHub</a></span>
+  <span><b>Stack</b>Python · PyTorch · SciPy · RTX 4080</span>
+  <span><b>Publicado</b>2026-06-10</span>
+</div>
 
-    <p class="foot">Built with Python · NumPy/SciPy · PyTorch · Optuna · Gradio.
-      Single-phase oil MVP; real-case validation is future work.</p>
+<nav class="toc" id="toc"><div class="toc-title">Contenido</div><ol></ol></nav>
+
+<div class="metrics">
+  <div class="metric hero">
+    <div class="value">0.62</div>
+    <div class="label">bal-acc yacimiento — extrapolación</div>
   </div>
+  <div class="metric">
+    <div class="value">0.81</div>
+    <div class="label">bal-acc frontera — extrapolación</div>
+  </div>
+  <div class="metric">
+    <div class="value">0.34</div>
+    <div class="label">MAE parámetros (log10)</div>
+  </div>
+  <div class="metric">
+    <div class="value">6</div>
+    <div class="label">arquitecturas, condiciones idénticas</div>
+  </div>
+</div>
+
+<h2>El problema: leer la "firma" de un yacimiento</h2>
+<p>Cuando se cierra o abre un pozo, la presión de fondo responde con una curva que
+codifica qué hay alrededor: si la roca es homogénea o naturalmente fracturada, si el
+pozo fue estimulado con una fractura hidráulica, si hay una falla sellante o un
+acuífero a cierta distancia. El intérprete experto no mira la presión directamente:
+mira su <strong>derivada de Bourdet</strong> en escala log-log, donde cada régimen de
+flujo deja una pendiente característica — 1 mientras domina el pozo, ½ si hay flujo
+lineal de fractura, una meseta cuando el flujo es radial, y firmas tardías cuando la
+presión "toca" una frontera.</p>
+
+<figure>
+  <img src="assets/style_loglog_demo.png" alt="Curva log-log: presión y derivada de Bourdet con regímenes anotados">
+  <figcaption><b>El objeto de estudio.</b> Una fractura de conductividad infinita con
+  almacenamiento de pozo, generada por el motor analítico del proyecto: pendiente
+  unitaria temprana (el pozo "jadeando"), media pendiente del flujo lineal, y la
+  meseta radial en 0.5. Leer esto requiere años de experiencia; la pregunta del
+  proyecto es cuánto de esa lectura puede aprender una red.</figcaption>
+</figure>
+
+<p>Interpretar esto es lento, experto y parcialmente subjetivo. La pregunta que me
+hice no fue solo "¿puede automatizarse?" sino algo más útil:
+<strong>¿qué familia de arquitecturas lo hace mejor, y por qué?</strong></p>
+
+<h2>Los datos: física antes que red</h2>
+<p>No hay millones de pruebas de presión etiquetadas en el mundo real. La salida fue
+generarlas: implementé las soluciones analíticas en el espacio de Laplace (4 modelos
+de yacimiento × 4 fronteras, con almacenamiento y daño siempre presentes), las
+invierto con Stehfest, y <strong>certifiqué el motor contra las type curves
+publicadas y contra AnaFlow</strong> antes de entrenar nada. Encima va una capa de
+realismo — ruido de gauge, deriva, truncamiento, outliers — y la derivada de Bourdet
+con ventana variable, igual que en campo.</p>
+
+<div class="flow wide">
+<pre class="mermaid">
+flowchart LR
+  A["Motor analítico<br/><small>Laplace + Stehfest, certificado</small>"]
+  B["Capa de realismo<br/><small>ruido gauge, deriva, truncado</small>"]
+  C["Derivada de Bourdet<br/><small>ventana L variable</small>"]
+  D["Representación 5 canales<br/><small>p, p′, t, sep, slope</small>"]
+  E["Banco de arquitecturas<br/><small>6 modelos, condiciones idénticas</small>"]
+  F["Métricas balanceadas<br/><small>in-dist + extrapolación</small>"]
+  A --> B --> C --> D --> E --> F
+  style D stroke:#2962FF,stroke-width:2.5px
+  style F stroke:#BF5700,stroke-width:2.5px
+</pre>
+</div>
+
+<p>Un port del motor a GPU (validado contra el de CPU a 4×10⁻⁷) genera
+<strong>5 millones de curvas en 14 minutos</strong>. Eso convirtió "más datos" en un
+experimento barato — y permitió descubrir que más datos no era la respuesta.</p>
+
+<h2>El hallazgo que cambió el proyecto</h2>
+<p>Durante dos ciclos, la clase más confundida fue el par homogéneo ↔ fractura de
+conductividad infinita. Escalé los datos de 25 mil a 5 millones de curvas: la
+accuracy balanceada de yacimiento subió de 0.51 a 0.64 y ahí se aplanó. Escalé la
+capacidad 60×: nada. El cuello no era el modelo ni los datos.</p>
+
+<p>Era la <strong>representación</strong>. Estandarizar cada curva (media 0, varianza
+1) — el reflejo automático en ML — destruía la señal que un intérprete usa primero:
+la <strong>separación vertical entre la presión y su derivada</strong>, que vale
+exactamente \( \log_{10} 2 \) durante el flujo lineal de una fractura:</p>
+
+<div class="equation">
+  <span>$$ \Delta p \propto \sqrt{t} \;\Rightarrow\; \Delta p' = \tfrac{1}{2}\,\Delta p
+  \;\Rightarrow\; \log_{10}\Delta p - \log_{10}\Delta p' = \log_{10} 2 \approx 0.301 $$</span>
+  <span class="eq-no">(1)</span>
+</div>
+
+<div class="finding">
+  <span class="tag">Hallazgo</span>
+  Devolverle al modelo dos canales físicos — la separación Δp−Δp′ y la pendiente
+  log-log local — movió la métrica más que pasar de 2 a 5 millones de curvas.
+  Restaurar señal que la normalización destruyó vale más que escalar datos.
+</div>
+
+<p>El segundo canal (la pendiente local de la derivada) tiene además una propiedad
+estructural: es invariante a los desplazamientos en log-tiempo que produce el
+almacenamiento de pozo. Esa invariancia se convirtió, como se ve abajo, en
+robustez fuera de distribución.</p>
+
+<h2>El banco: seis arquitecturas, mismas reglas</h2>
+<p>Con la entrada de 5 canales fijada, entrené seis arquitecturas con el mismo
+presupuesto (40 mil pasos sobre 2 millones de curvas congeladas), la misma selección
+por validación, dos semillas, y el mismo test estratificado de 1200 curvas que nadie
+vio en entrenamiento. Dos números por modelo: <em>in-distribution</em> (lo que viste)
+y <strong>extrapolación</strong> — un test con almacenamiento de pozo más alto que
+todo lo entrenado, donde la firma temprana está más enmascarada.</p>
+
+<table class="wide">
+  <thead>
+    <tr><th>Arquitectura</th><th class="num">Params</th><th class="num">Yacimiento</th>
+        <th class="num">Frontera</th><th class="num">MAE</th><th class="num">Extrapolación</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>PatchTST-grande (Transformer)</td><td class="num">6.35 M</td>
+        <td class="num"><span class="best">0.639</span></td><td class="num"><span class="best">0.762</span></td>
+        <td class="num"><span class="best">0.322</span></td><td class="num">0.526</td></tr>
+    <tr><td>TCN (convs dilatadas)</td><td class="num">0.27 M</td><td class="num">0.634</td>
+        <td class="num">0.756</td><td class="num">0.378</td><td class="num">0.578</td></tr>
+    <tr><td>PatchTST</td><td class="num">0.16 M</td><td class="num">0.621</td>
+        <td class="num">0.740</td><td class="num">0.410</td><td class="num">0.548</td></tr>
+    <tr><td>InceptionTime</td><td class="num">0.42 M</td><td class="num">0.621</td>
+        <td class="num">0.743</td><td class="num">0.409</td><td class="num">0.569</td></tr>
+    <tr><td>ResNet-1D</td><td class="num">0.24 M</td><td class="num">0.610</td>
+        <td class="num">0.745</td><td class="num">0.428</td><td class="num"><span class="best">0.582</span></td></tr>
+    <tr><td>MoE (mezcla de expertos)</td><td class="num">0.12 M</td><td class="num">0.563</td>
+        <td class="num">0.704</td><td class="num">0.544</td><td class="num">0.470</td></tr>
+  </tbody>
+  <caption><b>Banco a presupuesto idéntico</b> — media de 2 semillas, 40k pasos sobre
+  2M de curvas, mismo test (300 por clase). Mejor valor por columna en naranja. Filas
+  fuente: <code>outputs/ablation/bench_*.json</code> del repo.</caption>
+</table>
+
+<p>Tres lecturas que me parecen las honestas:</p>
+<p><strong>① La capacidad por fin pagó — pero solo con la entrada rica.</strong> En el
+ciclo anterior, con 3 canales, un modelo 60× más grande rendía igual que el pequeño.
+Con los canales físicos, el Transformer de 6.35M lidera in-distribution y rompe el
+récord de error en parámetros. La capacidad no estaba de más: estaba ciega.</p>
+<p><strong>② Generalizar y memorizar son ejes distintos.</strong> El modelo grande
+gana adentro pero es el más frágil fuera de distribución; el ResNet pequeño y el TCN
+— convoluciones, sesgo inductivo local — aguantan mejor donde el storage enmascara.
+Si esto fuera a campo, yo no embarcaría el que gana el benchmark interno.</p>
+<p><strong>③ El MoE no funcionó, y el porqué es interesante.</strong> Mi hipótesis
+era que los regímenes de flujo son sub-problemas casi disjuntos y una mezcla de
+expertos se especializaría sola. Quedó última, y al mirar el enrutamiento la razón
+es visible: las compuertas reparten casi uniforme — solo la fractura finita (la firma
+más distintiva, pendiente ¼) capturó un experto con peso 0.55. Especialización a
+medias, peor que un monolito. Resultado negativo, publicado como tal.</p>
+
+<div class="carousel" data-carousel>
+  <div class="carousel-track">
+    <figure>
+      <img src="assets/bench_moe_routing.png" alt="Enrutamiento del MoE por clase física">
+      <figcaption><b>1 · El MoE por dentro.</b> Peso medio de cada experto según la
+      clase verdadera: filas casi planas salvo fractura finita → experto 0. La
+      especialización que esperaba no emergió.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_attention_homogeneous.png" alt="Atención PatchTST — homogéneo">
+      <figcaption><b>2 · Dónde mira el Transformer (homogéneo).</b> Atención del
+      último bloque: columnas concentradas en los parches de la transición
+      storage→radial — el mismo tramo que mira un intérprete.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_attention_inf_fracture.png" alt="Atención PatchTST — fractura infinita">
+      <figcaption><b>3 · Fractura inf-conductiva.</b> La atención se desplaza a los
+      parches tempranos, donde vive la media pendiente.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_recall_by_class.png" alt="Recall por clase y arquitectura">
+      <figcaption><b>4 · Fortalezas por clase.</b> Recall de yacimiento por
+      arquitectura: la fractura finita es fácil para todos; el par
+      homogéneo/inf-fractura separa a los contendientes.</figcaption>
+    </figure>
+  </div>
+  <div class="carousel-nav">
+    <button data-prev aria-label="Anterior">‹</button>
+    <span class="dots"></span>
+    <button data-next aria-label="Siguiente">›</button>
+  </div>
+</div>
+
+<h2>Los finalistas a escala completa</h2>
+<p>Los dos mejores pasaron a la final: 80 mil pasos sobre 5 millones de curvas.</p>
+
+<table>
+  <thead>
+    <tr><th>Finalista (5M)</th><th class="num">Yacimiento</th><th class="num">Frontera</th>
+        <th class="num">MAE</th><th class="num">Extrap yac</th><th class="num">Extrap MAE</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td>TCN — embarcado</td>
+        <td class="num">0.632</td><td class="num">0.771</td><td class="num">0.340</td>
+        <td class="num"><span class="best">0.623</span></td><td class="num"><span class="best">0.363</span></td></tr>
+        <tr><td>PatchTST-grande</td>
+        <td class="num"><span class="best">0.652</span></td><td class="num"><span class="best">0.783</span></td>
+        <td class="num"><span class="best">0.278</span></td>
+        <td class="num">0.513</td><td class="num">0.892</td></tr>
+  </tbody>
+  <caption><b>La final.</b> El TCN entrenado con 5M de curvas casi no distingue entre
+  el test conocido y la extrapolación a storage nunca visto — esa es la propiedad que
+  importa en campo, donde nadie promete que el pozo se parezca al entrenamiento.
+  Para contraste: el mejor modelo del ciclo anterior extrapolaba a 0.553 con MAE 0.735.</caption>
+</table>
+
+<p><strong>Elección:</strong> embarqué el TCN como intérprete de la app.
+<strong>Por qué:</strong> un caso real siempre está, en algún grado, fuera de la
+distribución de entrenamiento; prefiero el modelo que degrada 1 punto fuera de
+distribución al que gana 2 puntos adentro y pierde 11 afuera (y triplica el error de parámetros).
+<strong>Alternativa descartada:</strong> el ensemble de los dos — daba +0.01
+in-distribution y diluía la historia comparativa que es el corazón del proyecto.</p>
+
+<h2>Los límites, sin maquillaje</h2>
+<p>El techo de este problema no es de ingeniería: es físico. Dos yacimientos
+distintos pueden producir curvas indistinguibles dentro de la ventana medida — el
+storage tapa la firma temprana de la fractura, y una frontera lejana simplemente no
+aparece si la prueba termina antes. Lo medí con un instrumento simple: ¿los errores
+del modelo caen en los pares que un intérprete senior también confundiría, o caen en
+cualquier parte? En frontera, el error está 2.8–3× más concentrado en los pares
+físicamente ambiguos que lo que daría el azar — ese residual es del problema, no del
+modelo. En yacimiento todavía quedaba margen, y los canales físicos se comieron una
+parte; el resto del camino es información nueva (ventanas más largas, deconvolución),
+no más entrenamiento.</p>
+<p>Tampoco valido todavía con datos reales: la infraestructura está lista
+(CSV → diagnóstico en la app Gradio), pero conseguir y digitalizar casos publicados
+con ground truth es un proyecto en sí — es el siguiente.</p>
+
+<h2>Si tuviera que resumirlo</h2>
+<p>Primero la física, después la red: certificar el generador valió más que cualquier
+hiperparámetro, y el mayor salto de accuracy vino de entender qué señal le estaba
+borrando yo mismo a la entrada. Las arquitecturas importan menos de lo que se
+promete y más de lo que se mide: el eje interesante no es "cuál gana" sino
+in-distribution vs extrapolación, y ahí las convoluciones dilatadas le ganaron al
+Transformer 23× más grande. Y un resultado negativo bien diagnosticado — el MoE con
+sus compuertas planas — enseña más que un punto decimal de mejora.</p>
+<p>El código, el motor certificado, los tests y todas las filas de los experimentos
+están en <a href="https://github.com/OilCoder/Deep-PTA">el repositorio</a>. Las
+decisiones de diseño, con sus porqués y sus callejones sin salida, están en la
+<a href="bitacora.html">bitácora</a>. Cualquier comentario es bienvenido.</p>
+
+</div>
+
+<!-- ======================= ENGLISH ======================= -->
+<div data-lang="en" style="display:none">
+
+<h1 class="title">Which neural architecture best interprets a well pressure test?</h1>
+<p class="lede">I trained six networks — from a 240k-parameter CNN to a 6M-parameter
+Transformer, including a mixture of experts — on millions of curves generated by a
+certified analytical engine, and made them compete under identical conditions at a
+senior interpreter's job: reading the Bourdet derivative and diagnosing the
+reservoir. Here are the results, including what didn't work.</p>
+
+<div class="byline full">
+  <span><b>Author</b>Carlos Esquivel</span>
+  <span><b>Project</b>Deep PTA — code on <a href="https://github.com/OilCoder/Deep-PTA">GitHub</a></span>
+  <span><b>Stack</b>Python · PyTorch · SciPy · RTX 4080</span>
+  <span><b>Published</b>2026-06-10</span>
+</div>
+
+<div class="metrics">
+  <div class="metric hero">
+    <div class="value">0.62</div>
+    <div class="label">reservoir bal-acc — extrapolation</div>
+  </div>
+  <div class="metric">
+    <div class="value">0.81</div>
+    <div class="label">boundary bal-acc — extrapolation</div>
+  </div>
+  <div class="metric">
+    <div class="value">0.34</div>
+    <div class="label">parameter MAE (log10)</div>
+  </div>
+  <div class="metric">
+    <div class="value">6</div>
+    <div class="label">architectures, identical conditions</div>
+  </div>
+</div>
+
+<h2>The problem: reading a reservoir's signature</h2>
+<p>When a well is shut in or opened, bottomhole pressure responds with a curve that
+encodes what surrounds it: whether the rock is homogeneous or naturally fractured,
+whether the well was stimulated with a hydraulic fracture, whether a sealing fault
+or an aquifer sits some distance away. The expert doesn't read pressure directly:
+they read its <strong>Bourdet derivative</strong> on a log-log plot, where each flow
+regime leaves a characteristic slope — 1 while the wellbore dominates, ½ for
+fracture linear flow, a plateau for radial flow, and late-time signatures when
+pressure "touches" a boundary.</p>
+
+<figure>
+  <img src="assets/style_loglog_demo.png" alt="Log-log plot: pressure and Bourdet derivative with annotated regimes">
+  <figcaption><b>The object of study.</b> An infinite-conductivity fracture with
+  wellbore storage, generated by the project's analytical engine: early unit slope
+  (the wellbore "catching its breath"), the half slope of linear flow, and the radial
+  plateau at 0.5. Reading this takes years of practice; the project asks how much of
+  that reading a network can learn.</figcaption>
+</figure>
+
+<p>Interpretation is slow, expert-bound, and partly subjective. The question I asked
+wasn't just "can it be automated?" but something more useful:
+<strong>which family of architectures does it best, and why?</strong></p>
+
+<h2>The data: physics before networks</h2>
+<p>There aren't millions of labeled pressure tests in the real world. The way out
+was generating them: I implemented the analytical solutions in Laplace space (4
+reservoir models × 4 boundaries, with storage and skin always present), invert them
+with Stehfest, and <strong>certified the engine against published type curves and
+AnaFlow</strong> before training anything. On top goes a realism layer — gauge
+noise, drift, truncation, outliers — and the Bourdet derivative with a variable
+smoothing window, as in the field.</p>
+
+<div class="flow wide">
+<pre class="mermaid">
+flowchart LR
+  A["Analytical engine<br/><small>Laplace + Stehfest, certified</small>"]
+  B["Realism layer<br/><small>gauge noise, drift, truncation</small>"]
+  C["Bourdet derivative<br/><small>variable L window</small>"]
+  D["5-channel representation<br/><small>p, p′, t, sep, slope</small>"]
+  E["Architecture benchmark<br/><small>6 models, identical conditions</small>"]
+  F["Balanced metrics<br/><small>in-dist + extrapolation</small>"]
+  A --> B --> C --> D --> E --> F
+  style D stroke:#2962FF,stroke-width:2.5px
+  style F stroke:#BF5700,stroke-width:2.5px
+</pre>
+</div>
+
+<p>A GPU port of the engine (validated against the CPU one to 4×10⁻⁷) generates
+<strong>5 million curves in 14 minutes</strong>. That made "more data" a cheap
+experiment — which is how I learned more data wasn't the answer.</p>
+
+<h2>The finding that changed the project</h2>
+<p>For two cycles, the most confused pair was homogeneous ↔ infinite-conductivity
+fracture. I scaled the data from 25k to 5M curves: balanced reservoir accuracy rose
+from 0.51 to 0.64 and flattened there. I scaled capacity 60×: nothing. The
+bottleneck was neither the model nor the data.</p>
+
+<p>It was the <strong>representation</strong>. Standardizing each curve (zero mean,
+unit variance) — the automatic ML reflex — destroyed the signal an interpreter uses
+first: the <strong>vertical separation between pressure and its derivative</strong>,
+which equals exactly \( \log_{10} 2 \) during fracture linear flow:</p>
+
+<div class="equation">
+  <span>$$ \Delta p \propto \sqrt{t} \;\Rightarrow\; \Delta p' = \tfrac{1}{2}\,\Delta p
+  \;\Rightarrow\; \log_{10}\Delta p - \log_{10}\Delta p' = \log_{10} 2 \approx 0.301 $$</span>
+  <span class="eq-no">(1)</span>
+</div>
+
+<div class="finding">
+  <span class="tag">Finding</span>
+  Giving the model two physics channels — the Δp−Δp′ separation and the local
+  log-log slope — moved the metric more than going from 2 to 5 million training
+  curves. Restoring signal destroyed by normalization beats scaling data.
+</div>
+
+<p>The second channel (the derivative's local slope) also has a structural property:
+it is invariant to the log-time shifts that wellbore storage produces. That
+invariance became, as shown below, out-of-distribution robustness.</p>
+
+<h2>The benchmark: six architectures, same rules</h2>
+<p>With the 5-channel input fixed, I trained six architectures on the same budget
+(40k steps over 2 million frozen curves), the same validation-based selection, two
+seeds, and the same stratified 1200-curve test no model ever saw. Two numbers per
+model: <em>in-distribution</em> (what you trained on) and
+<strong>extrapolation</strong> — a test with higher wellbore storage than anything
+trained, where the early signature is most masked.</p>
+
+<table class="wide">
+  <thead>
+    <tr><th>Architecture</th><th class="num">Params</th><th class="num">Reservoir</th>
+        <th class="num">Boundary</th><th class="num">MAE</th><th class="num">Extrapolation</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Large PatchTST (Transformer)</td><td class="num">6.35 M</td>
+        <td class="num"><span class="best">0.639</span></td><td class="num"><span class="best">0.762</span></td>
+        <td class="num"><span class="best">0.322</span></td><td class="num">0.526</td></tr>
+    <tr><td>TCN (dilated convs)</td><td class="num">0.27 M</td><td class="num">0.634</td>
+        <td class="num">0.756</td><td class="num">0.378</td><td class="num">0.578</td></tr>
+    <tr><td>PatchTST</td><td class="num">0.16 M</td><td class="num">0.621</td>
+        <td class="num">0.740</td><td class="num">0.410</td><td class="num">0.548</td></tr>
+    <tr><td>InceptionTime</td><td class="num">0.42 M</td><td class="num">0.621</td>
+        <td class="num">0.743</td><td class="num">0.409</td><td class="num">0.569</td></tr>
+    <tr><td>ResNet-1D</td><td class="num">0.24 M</td><td class="num">0.610</td>
+        <td class="num">0.745</td><td class="num">0.428</td><td class="num"><span class="best">0.582</span></td></tr>
+    <tr><td>MoE (mixture of experts)</td><td class="num">0.12 M</td><td class="num">0.563</td>
+        <td class="num">0.704</td><td class="num">0.544</td><td class="num">0.470</td></tr>
+  </tbody>
+  <caption><b>Identical-budget benchmark</b> — mean of 2 seeds, 40k steps on 2M
+  curves, same test (300 per class). Best per column in orange. Source rows:
+  <code>outputs/ablation/bench_*.json</code> in the repo.</caption>
+</table>
+
+<p>Three readings I consider the honest ones:</p>
+<p><strong>① Capacity finally paid off — but only with the rich input.</strong> In
+the previous cycle, with 3 channels, a 60× larger model performed the same as the
+small one. With the physics channels, the 6.35M Transformer leads in-distribution
+and sets the parameter-error record. Capacity wasn't useless: it was blind.</p>
+<p><strong>② Generalizing and memorizing are different axes.</strong> The big model
+wins inside but is the most fragile out of distribution; the small ResNet and the
+TCN — convolutions, local inductive bias — hold up better where storage masks the
+signature. If this went to the field, I wouldn't ship the internal-benchmark
+winner.</p>
+<p><strong>③ The MoE failed, and the why is interesting.</strong> My hypothesis was
+that flow regimes are nearly disjoint sub-problems and a mixture of experts would
+specialize on its own. It came last, and the routing shows why: the gates spread
+almost uniformly — only the finite-conductivity fracture (the most distinctive
+signature, ¼ slope) captured an expert at 0.55 weight. Half-specialization, worse
+than a monolith. A negative result, published as such.</p>
+
+<div class="carousel" data-carousel>
+  <div class="carousel-track">
+    <figure>
+      <img src="assets/bench_moe_routing.png" alt="MoE routing by physical class">
+      <figcaption><b>1 · Inside the MoE.</b> Mean gate weight per expert by true
+      class: nearly flat rows except finite fracture → expert 0. The specialization
+      I expected never emerged.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_attention_homogeneous.png" alt="PatchTST attention — homogeneous">
+      <figcaption><b>2 · Where the Transformer looks (homogeneous).</b> Last-block
+      attention: columns concentrate on the storage→radial transition patches — the
+      same stretch a human interpreter reads.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_attention_inf_fracture.png" alt="PatchTST attention — infinite fracture">
+      <figcaption><b>3 · Infinite-conductivity fracture.</b> Attention shifts to the
+      early patches, where the half slope lives.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/bench_recall_by_class.png" alt="Recall by class and architecture">
+      <figcaption><b>4 · Per-class strengths.</b> Reservoir recall by architecture:
+      finite fracture is easy for everyone; the homogeneous/inf-fracture pair is
+      what separates the contenders.</figcaption>
+    </figure>
+  </div>
+  <div class="carousel-nav">
+    <button data-prev aria-label="Previous">‹</button>
+    <span class="dots"></span>
+    <button data-next aria-label="Next">›</button>
+  </div>
+</div>
+
+<h2>The finalists at full scale</h2>
+<p>The top two went to the final: 80k steps over 5 million curves.</p>
+
+<table>
+  <thead>
+    <tr><th>Finalist (5M)</th><th class="num">Reservoir</th><th class="num">Boundary</th>
+        <th class="num">MAE</th><th class="num">Extrap res</th><th class="num">Extrap MAE</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td>TCN — shipped</td>
+        <td class="num">0.632</td><td class="num">0.771</td><td class="num">0.340</td>
+        <td class="num"><span class="best">0.623</span></td><td class="num"><span class="best">0.363</span></td></tr>
+        <tr><td>Large PatchTST</td>
+        <td class="num"><span class="best">0.652</span></td><td class="num"><span class="best">0.783</span></td>
+        <td class="num"><span class="best">0.278</span></td>
+        <td class="num">0.513</td><td class="num">0.892</td></tr>
+  </tbody>
+  <caption><b>The final.</b> The TCN trained on 5M curves barely distinguishes the
+  known test from extrapolation to never-seen storage — the property that matters in
+  the field, where nothing guarantees your well resembles the training set. For
+  contrast: the previous cycle's best model extrapolated at 0.553 with MAE 0.735.</caption>
+</table>
+
+<p><strong>Choice:</strong> I shipped the TCN as the app's interpreter.
+<strong>Why:</strong> a real case is always, to some degree, out of the training
+distribution; I prefer the model that loses 1 point out of distribution to the one
+that wins 2 inside and drops 11 outside (tripling the parameter error).
+<strong>Discarded alternative:</strong> ensembling both — it bought +0.01
+in-distribution and diluted the comparative story that is the heart of the project.</p>
+
+<h2>The limits, no makeup</h2>
+<p>This problem's ceiling isn't an engineering one: it's physical. Two different
+reservoirs can produce indistinguishable curves within the measured window — storage
+masks the fracture's early signature, and a distant boundary simply never shows if
+the test ends too soon. I measured this with a simple instrument: do the model's
+errors land on the pairs a senior interpreter would also confuse, or anywhere? For
+boundaries, errors are 2.8–3× more concentrated on physically ambiguous pairs than
+chance — that residual belongs to the problem, not the model. For reservoirs there
+was still margin, and the physics channels ate part of it; the rest of the way is
+new information (longer windows, deconvolution), not more training.</p>
+<p>I also haven't validated on real data yet: the infrastructure is ready
+(CSV → diagnosis in the Gradio app), but sourcing and digitizing published cases
+with ground truth is a project of its own — it's the next one.</p>
+
+<h2>If I had to sum it up</h2>
+<p>Physics first, network second: certifying the generator was worth more than any
+hyperparameter, and the biggest accuracy jump came from realizing which signal I was
+erasing from my own input. Architectures matter less than promised and more than
+measured: the interesting axis isn't "which one wins" but in-distribution vs
+extrapolation, and there the dilated convolutions beat a Transformer 23× their
+size. And a well-diagnosed negative result — the MoE with its flat gates — teaches
+more than a decimal point of improvement.</p>
+<p>The code, the certified engine, the tests and every experiment row live in
+<a href="https://github.com/OilCoder/Deep-PTA">the repository</a>. The design
+decisions, with their whys and dead ends, are in the
+<a href="bitacora.html">logbook</a>. Comments are welcome.</p>
+
+</div>
+
+<footer class="full">
+  <span data-lang="es">Deep PTA · informe de resultados ·
+    <a href="bitacora.html">bitácora de decisiones</a> ·
+    <a href="guia_estilos.html">guía de estilos</a> ·
+    <a href="https://github.com/OilCoder/Deep-PTA">código</a></span>
+  <span data-lang="en" style="display:none">Deep PTA · results report ·
+    <a href="bitacora.html">decision logbook</a> ·
+    <a href="guia_estilos.html">style guide</a> ·
+    <a href="https://github.com/OilCoder/Deep-PTA">code</a></span>
+</footer>
+
+</article>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '\\(', right: '\\)', display: false}
+  ]});"></script>
+<script src="assets/site.js"></script>
 </body>
 </html>

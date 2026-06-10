@@ -1,60 +1,71 @@
 # Deep PTA
 
-Neural network that interprets pressure transient tests (PTA): it reads the Δp +
-Bourdet derivative curve (log-log) and diagnoses the reservoir model, the boundary,
-and the key parameters (k·h, S, C, ω, λ, L, x_f) — the senior interpreter's job,
-automated. Trained on a 100% synthetic dataset produced by a **certified** analytical
-engine (Laplace solutions + Stehfest inversion). Ships with an interactive app
-(CSV → diagnosis) and an optional LLM narrator agent.
+**Which neural architecture best interprets a well pressure test?** Six networks —
+ResNet-1D, PatchTST (small and large), InceptionTime, TCN, and a mixture of
+experts — compete under identical conditions at the senior interpreter's job:
+reading the Δp + Bourdet derivative curve (log-log) and diagnosing the reservoir
+model, the boundary, and the key parameters. Trained on millions of synthetic
+curves from a **certified** analytical engine (Laplace solutions + Stehfest
+inversion). Ships with an interactive app (CSV → diagnosis).
 
-Design source of truth: `documentation/01_overview.md`,
-`documentation/02_diseno_interpretacion_pruebas_presion.md`,
-`documentation/03_plan_implementacion.md`, and `documentation/04_referencias.md`.
+**Results site (ES/EN):** https://oilcoder.github.io/Deep-PTA/ — report + decision logbook.
 
-## What works
+## The benchmark (the project's core result)
 
-- **Certified analytical engine** — homogeneous, Warren-Root double porosity, and
-  infinite/finite-conductivity fractures, with infinite / sealing-fault /
-  constant-pressure / closed boundaries, via Laplace-space solutions + Stehfest
-  inversion. Verified against published Bourdet/Gringarten type curves and AnaFlow.
-- **Synthetic generator** — realistic noise, drift, truncation, and a domain-aware
-  validity filter; reproducible, with a **hybrid `C_D` split** (i.i.d. in-distribution
-  holdout + a held-out high-storage extrapolation set).
-- **GPU-batched engine** — a PyTorch port of the analytical engine validated against the
-  certified CPU engine to ~4e-7 (`src/deep_pta/engine/gpu_engine.py`); generates millions
-  of curves in minutes (2M / 5M frozen training sets), preserving the data distribution.
-- **Two models + ensemble** — a multi-task ResNet-1D and a hand-built PatchTST-style
-  Transformer over a 3-channel log-log representation (Δp, Bourdet derivative, absolute
-  time), plus a softmax/precision-fusing ensemble.
-- **Honest evaluation** — balanced accuracy, macro-F1, and per-class recall on a
-  class-stratified test set, reported separately for in-distribution and extrapolation;
-  an entrypoint with HPO, early stopping, and TensorBoard.
-- **App + narrator** — Gradio CSV→diagnosis with a fitted-curve overlay; optional
-  Claude-based narrator.
+Identical budget (40k steps on the same frozen 2M-curve set, 5-channel physics
+input, validation-based selection, 2 seeds, same stratified test). Two numbers per
+model: in-distribution and **extrapolation** to never-trained high wellbore storage.
 
-## Results (honest, balanced)
+| Architecture | Params | Reservoir | Boundary | MAE | Extrapolation |
+|---|---|---|---|---|---|
+| Large PatchTST | 6.35M | **0.639** | **0.762** | **0.322** | 0.526 |
+| TCN | 0.27M | 0.634 | 0.756 | 0.378 | 0.578 |
+| PatchTST | 0.16M | 0.621 | 0.740 | 0.410 | 0.548 |
+| InceptionTime | 0.42M | 0.621 | 0.743 | 0.409 | 0.569 |
+| ResNet-1D | 0.24M | 0.610 | 0.745 | 0.428 | **0.582** |
+| MoE (dense gating) | 0.12M | 0.563 | 0.704 | 0.544 | 0.470 |
 
-Headline accuracy is **balanced accuracy** (mean per-class recall) on a **class-stratified**
-test set — raw accuracy is misleading under class imbalance. Two test sets are reported: an
-**in-distribution** holdout (headline) and a held-out **high-`C_D` extrapolation** stress
-test the model never trains on.
+Finalists at 5M curves / 80k steps: the **TCN** reaches 0.632 / 0.771 / MAE 0.340
+in-distribution and — the property that matters in the field —
+**0.623 / 0.806 / MAE 0.363 under extrapolation**, nearly matching its
+in-distribution numbers. It ships as the app's interpreter (`models/best.pt`).
 
-The headline is a **ResNet-1D + PatchTST ensemble** (best configuration).
+Three findings: (1) **capacity pays only with a rich input** — with the old
+3-channel input a 60× larger model gained nothing; with the physics channels the
+large Transformer leads in-distribution; (2) **in-distribution and OOD robustness
+are different axes** — the big model drops 11 points under extrapolation, the TCN
+~1; (3) the **MoE underperformed** and its routing analysis shows why (nearly
+uniform gates — a published negative result). Full method, the
+reservoir-engineering↔code mapping, and every experiment row:
+`documentation/10_reporte_banco_arquitecturas.md` + `outputs/ablation/*.json`.
 
-| Head | Original (misleading) | Honest baseline | **In-distribution (now)** | Extrapolation |
-|---|---|---|---|---|
-| Reservoir (4 classes) | 0.42 raw | 0.513 | **0.649** | 0.553 |
-| Boundary (4 classes) | 0.84 raw | 0.698 | **0.765** | 0.733 |
-| Param MAE (log10) | — | 0.69 | **0.36** | 0.73 |
+## The input is half the result
 
-The boundary "0.84" was a mirage (old test ~70% infinite-acting). The real gains came from
-**data scale**: a GPU-batched engine made it cheap to train on millions of curves, lifting
-reservoir balanced accuracy 0.51 → 0.65 and nearly halving the parameter MAE (0.69 → 0.36).
-Per-class reservoir recall: homogeneous 0.12 → 0.59, double-porosity 0.51 → 0.73. The
-residual ceiling is the physical homogeneous↔infinite-fracture non-uniqueness. Capacity is
-**not** the bottleneck (a 2× larger model matched the small one); data was. The best single
-model (ResNet-1D on 5M) scores 0.638 reservoir / 0.750 boundary on its own. Full method and
-ablation: `documentation/07_reporte_mejora_accuracy.md`.
+The biggest single jump didn't come from data or capacity but from the
+**representation**: per-curve standardization destroyed the pressure/derivative
+separation (exactly log₁₀2 in fracture linear flow — the interpreter's classic
+discriminator). Restoring it as a fixed-normalization channel, plus a local
+log-log-slope channel, beat scaling the training set from 2M to 5M curves.
+History of the metric-honesty and data-scale cycles:
+`documentation/07_reporte_mejora_accuracy.md`.
+
+## What's inside
+
+- **Certified analytical engine** — 4 reservoir models × 4 boundaries with wellbore
+  storage and skin, via Laplace + Stehfest; verified against published
+  Bourdet/Gringarten type curves and AnaFlow. A GPU-batched port (validated to
+  ~4e-7) generates 5M curves in ~14 min.
+- **Domain-aware generator** — gauge noise, drift, truncation; a validity filter
+  that relabels undeveloped boundaries as "infinite" (the interpreter's rule,
+  codified); hybrid `C_D` split (i.i.d. holdout + extrapolation band).
+- **Six architectures** sharing one multi-task head contract (reservoir, boundary,
+  masked heteroscedastic parameter regression) and one training loop.
+- **Honest evaluation** — balanced accuracy on a class-stratified test, per-class
+  recall, in-distribution and extrapolation always reported together, and a
+  confusion-concentration diagnostic separating physical non-uniqueness from
+  pipeline error.
+- **App** — Gradio CSV → diagnosis with fitted-curve overlay and entropy-based
+  confidence; optional LLM narrator.
 
 ## Run it
 
@@ -63,21 +74,20 @@ uv sync                                  # or: pip install -e .[dev,ml,app]
 
 pytest -q                                # verification gate (also: mypy src/, ruff check .)
 
-# Generate a large frozen training set on the GPU (engine on GPU, post on CPU):
-python debug/dbg_make_train_gpu.py --total 5000000 --out data/synthetic_train_5m.h5
+# Generate the 5-channel training superset on the GPU:
+python debug/dbg_make_train_gpu.py --total 2000000 --out data/synthetic_train_2m_v3.h5 \
+    --extra-channels sep,slope --float16
 
-# Train the final model from the frozen set (num_workers 0 for very large sets):
-python -m deep_pta.train --steps 80000 --train-h5 data/synthetic_train_5m.h5
+# Reproduce the benchmark (12 runs) and the finalists:
+bash debug/dbg_run_bench.sh && bash debug/dbg_run_finalists.sh
+python debug/dbg_bench_analysis.py       # table + routing/attention figures
 
 python -m deep_pta.app.app               # launch the Gradio app
 ```
 
 ## Status
 
-Engineering complete (engine, generator, models, app, narrator). The 2026-06 cycles fixed
-metric honesty + class imbalance, added a hybrid `C_D` split (in-distribution + extrapolation),
-a GPU-batched engine validated against the certified CPU engine, and confirmed empirically
-that **data scale** — not hyperparameters or capacity — was the bottleneck for the reservoir
-head (0.51 → 0.64). Next: break the homogeneous↔infinite-fracture non-uniqueness and validate
-on real cases (Lee/Horne/Volve/WebPlotDigitizer; the inference path
-`src/deep_pta/data/real_cases.py` is ready). See `todo/PLAN.md`.
+The architecture benchmark — the project's core question — is complete and
+published. Next: validation on real cases (Lee/Horne/Volve; the inference path
+`src/deep_pta/data/real_cases.py` is ready) and longer-window / deconvolution
+levers against the physical non-uniqueness ceiling.

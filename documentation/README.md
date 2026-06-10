@@ -15,5 +15,6 @@ vive en `aprendizaje/`; la landing pública en `docs/` (GitHub Pages).
 | `07_reporte_mejora_accuracy.md` | Ciclos v1/v2/v3: metodología, tablas de ablation, lectura honesta |
 | `08_reporte_sim_to_real.md` | Metodología de validación con datos reales (trabajo futuro) |
 | `09_posts_linkedin.md` | Borradores de posts de divulgación |
+| `10_reporte_banco_arquitecturas.md` | Ciclo v3: banco de 6 arquitecturas, mapeo yacimiento↔código, hallazgos |
 
 Convenciones en `.claude/rules/docs-style.md` y `.claude/rules/file-naming.md`.

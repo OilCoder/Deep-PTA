@@ -231,6 +231,7 @@ Gate dual-seed (+0.01) **superado** con margen (+0.025). Filas en
   log-t) y se confirmó.
 - El recall de homogéneo (la clase más débil) saltó +0.103; inf-fractura quedó plana — la
   frontera de decisión del par se movió a favor del homogéneo sin colapsar la fractura.
-- **Pendiente (Parte D del ciclo, no ejecutada aún)**: canales a escala 2M/5M, cabeza
-  auxiliar de regímenes de flujo, ataque directo al par confundido, ensemble calibrado.
-  Objetivo: yacimiento ≥0.70 in-dist. El plan vive en `todo/PLAN.md` (Phase 8).
+- **Continuación**: el ciclo se reenfocó (decisión del usuario) al estudio comparativo
+  de arquitecturas sobre esta entrada de 5 canales — banco de 6 contendientes en
+  condiciones idénticas + finalistas a 5M. Resultados completos en
+  `10_reporte_banco_arquitecturas.md`.

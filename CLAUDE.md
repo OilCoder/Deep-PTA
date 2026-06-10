@@ -68,14 +68,13 @@ Pages only; `aprendizaje/` = study material (target of `/study`).
 
 ## Current state
 
-**Ciclo v2 completo (2026-06-08)** — engine certified (9 type curves + AnaFlow),
-GPU engine validated (4e-7), 5M-curve training sets, honest balanced metrics.
-Headline (ResNet32+PatchTST ensemble, in-dist stratified test): reservoir bal-acc
-**0.649**, boundary **0.765**, MAE **0.357**; extrapolation stress test 0.553/0.733.
-Validation mode: `warn`. The v3 physics channels (Δp−Δp′ separation + local slope)
-are validated (dual-seed prototype: +0.025 reservoir, +0.038 extrap). Next —
-**refocused on the project's core question**: a comparative architecture benchmark
-(ResNet, PatchTST, MoE, InceptionTime, TCN, large PatchTST) under identical
-conditions, measuring how well each interprets pressure tests (per-class strengths,
-attention maps, expert routing). The ensemble is demoted to a footnote.
-See `todo/PLAN.md` (Phase 8) and `documentation/07_reporte_mejora_accuracy.md`.
+**Ciclo v3 completo (2026-06-10)** — the architecture benchmark (the project's core
+question) is done and published: 6 architectures × 2 seeds under identical
+conditions on the 5-channel physics input (Δp−Δp′ separation + local slope).
+Large PatchTST wins in-distribution (0.639/0.762/MAE 0.322); the **TCN finalist at
+5M is the shipped interpreter** (`models/best.pt`): in-dist 0.632/0.771/MAE 0.340,
+**extrapolation 0.623/0.806/MAE 0.363** (near in-dist). MoE = published negative
+result (flat gates). Bilingual results site (report + decision logbook) in `docs/`.
+`todo/`, `aprendizaje/`, `debug/`, `.claude/` are local-only (not published).
+Validation mode: `warn`. Next: real-data validation (`real_cases.py` ready).
+See `documentation/10_reporte_banco_arquitecturas.md`.
